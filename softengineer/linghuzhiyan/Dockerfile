@@ -8,11 +8,19 @@ WORKDIR /app
 COPY pom.xml ./
 # Optional: custom Maven settings for faster mirrors
 COPY maven-settings.xml /root/.m2/settings.xml
-RUN --mount=type=cache,target=/root/.m2 mvn -B -e -U -DskipTests dependency:go-offline
+RUN --mount=type=cache,target=/root/.m2 mvn \
+	-U -DskipTests \
+	-Dorg.slf4j.simpleLogger.showDateTime=true \
+	-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=info \
+	dependency:go-offline
 
 # Copy sources and build
 COPY src ./src
-RUN --mount=type=cache,target=/root/.m2 mvn -B -e -DskipTests clean package
+RUN --mount=type=cache,target=/root/.m2 mvn \
+	-DskipTests \
+	-Dorg.slf4j.simpleLogger.showDateTime=true \
+	-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=info \
+	clean package
 
 # ---------- Runtime stage ----------
 FROM eclipse-temurin:21-jre
