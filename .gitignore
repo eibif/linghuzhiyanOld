@@ -1,0 +1,31 @@
+# Java / Maven
+**/target/
+**/build/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+hs_err_pid*
+replay_pid*
+
+# Maven Wrapper (keep the jar if present)
+!.mvn/wrapper/maven-wrapper.jar
+
+# IDEs and editors
+.idea/
+*.iml
+.project
+.classpath
+.settings/
+.vscode/
+*.swp
+*~
+out/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node (if any)
+node_modules/
