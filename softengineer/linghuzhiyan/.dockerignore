@@ -1,0 +1,12 @@
+Dockerfile
+**/target/
+**/build/
+.mvn/
+.mvn/wrapper/
+.git/
+.gitignore
+.vscode/
+.idea/
+**/*.iml
+**/.DS_Store
+**/node_modules/

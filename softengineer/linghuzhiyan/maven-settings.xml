@@ -1,0 +1,21 @@
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
+  <mirrors>
+    <!-- 使用官方中央仓，若在国内网络可替换为合适的镜像，如阿里云/华为云等 -->
+    <!--
+    <mirror>
+      <id>aliyunmaven</id>
+      <mirrorOf>central</mirrorOf>
+      <name>aliyun maven</name>
+      <url>https://maven.aliyun.com/repository/central</url>
+    </mirror>
+    <mirror>
+      <id>aliyunpublic</id>
+      <mirrorOf>!central</mirrorOf>
+      <name>aliyun public</name>
+      <url>https://maven.aliyun.com/repository/public</url>
+    </mirror>
+    -->
+  </mirrors>
+</settings>
