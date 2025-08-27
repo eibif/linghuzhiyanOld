@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: linghuzhiyan
+  namespace: linghu
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: linghuzhiyan
+  template:
+    metadata:
+      labels:
+        app: linghuzhiyan
+    spec:
+      containers:
+        - name: app
+          image: ghcr.io/eibif/linghuzhiyan:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: docker
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: jwt-secret
+            - name: TZ
+              value: Asia/Shanghai
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: linghuzhiyan
+  namespace: linghu
+spec:
+  selector:
+    app: linghuzhiyan
+  ports:
+    - port: 8080
+      targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: linghuzhiyan
+  namespace: linghu
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    - host: linghu.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: linghuzhiyan
+                port:
+                  number: 8080
