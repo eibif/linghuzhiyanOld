@@ -1,0 +1,113 @@
+### test1
+POST http://10.128.54.190:5050/run
+Content-Type: application/json
+
+{
+  "cmd": [{
+    "args": ["/usr/bin/g++", "a.cc", "-o", "a"],
+    "env": ["PATH=/usr/bin:/bin"],
+    "files": [{
+      "content": ""
+    }, {
+      "name": "stdout",
+      "max": 10240
+    }, {
+      "name": "stderr",
+      "max": 10240
+    }],
+    "cpuLimit": 10000000000,
+    "memoryLimit": 104857600,
+    "procLimit": 50,
+    "copyIn": {
+      "a.cc": {
+        "content": "#include <iostream>\nusing namespace std;\nint main() {\nint a, b;\ncin >> a >> b;\ncout << a + b << endl;\n}"
+      }
+    },
+    "copyOut": ["stdout", "stderr"],
+    "copyOutCached": ["a"]
+  }]
+}
+
+### run
+POST http://10.128.54.190:5050/run
+Content-Type: application/json
+
+{
+  "cmd": [{
+    "args": ["a"],
+    "env": ["PATH=/usr/bin:/bin"],
+    "files": [{
+      "content": "1 1"
+    }, {
+      "name": "stdout",
+      "max": 10240
+    }, {
+      "name": "stderr",
+      "max": 10240
+    }],
+    "cpuLimit": 10000000000,
+    "memoryLimit": 104857600,
+    "procLimit": 50,
+    "copyIn": {
+      "a": {
+        "fileId": "3ZYW2EAQ"
+      }
+    }
+  }]
+}
+
+
+### delete
+DELETE http://10.128.54.190:5050/file/3ZYW2EAQ
+
+### cpurate
+POST http://10.128.54.190:5050/run
+Content-Type: application/json
+
+{
+    "cmd": [{
+    "args": ["/usr/bin/python3", "1.py"],
+    "env": ["PATH=/usr/bin:/bin"],
+    "files": [
+      {"content": ""},
+      {"name": "stdout","max": 10240},
+      {"name": "stderr","max": 10240}
+    ],
+    "cpuLimit": 3000000000,
+    "clockLimit": 4000000000,
+    "memoryLimit": 104857600,
+    "procLimit": 50,
+    "cpuRate": 0.1,
+    "copyIn": {
+        "1.py": {
+            "content": "#!/usr/bin/env python3\nwhile True:\n    pass"
+        }
+    }}]
+}
+
+### 多文件 单命令
+POST http://10.128.54.190:5050/run
+Content-Type: application/json
+
+{
+  "cmd": [{
+    "args": ["/bin/sh", "-c", "./compile.sh && ./run.sh"],
+    "env": ["PATH=/usr/bin:/bin"],
+    "files": [
+      {"content": ""},
+      {"name": "stdout", "max": 10240},
+      {"name": "stderr", "max": 10240}
+    ],
+    "cpuLimit": 6000000000,
+    "memoryLimit": 536870912,
+    "procLimit": 50,
+    "copyIn": {
+      "main.cpp": { "content": "#include <iostream>\n#include \"utils.h\"\nint main() { std::cout << add(2, 3); }" },
+      "utils.cpp": { "content": "#include \"utils.h\"\nint add(int a, int b) { return a + b; }" },
+      "utils.h": { "content": "int add(int a, int b);" },
+      "compile.sh": { "content": "#!/bin/sh\n/usr/bin/g++ main.cpp utils.cpp -o run" },
+      "run.sh": { "content": "#!/bin/sh\n./run" }
+    },
+    "copyOut": ["stdout", "stderr"]
+  }]
+}

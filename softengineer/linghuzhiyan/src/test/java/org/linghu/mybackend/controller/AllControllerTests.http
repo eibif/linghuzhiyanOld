@@ -1,0 +1,776 @@
+# 完整的API接口测试用例集
+# 模拟前端向后端发送请求的过程
+# 本测试文件覆盖了系统中所有的Controller类和接口
+
+### 基础配置
+@baseUrl = http://localhost:8080
+@contentType = application/json
+@token = {{login.response.body.data.token}}
+
+### 全局变量定义（在实际使用中需要根据数据库中的真实数据调整）
+@adminToken = eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ1c2VyMSIsImlhdCI6MTc0OTMwMDQ1NywiZXhwIjoxNzQ5MzA2NTA1fQ.FqlG2fvzw5frDd4SZ8CL59y8WGqlEvXQadpsgN-twND0s9vnB3EoWDIgKRYwXR6JimuJ2hHes9Sd1TBJrhF__g
+@teacherToken = eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0ZWExIiwiaWF0IjoxNzQ5Mjk5NjM3LCJleHAiOjE3NDkzMDU2ODV9.SXijAfgbwtx69CxbioPdM7Wqb0MjLPNQzphT0tgI1N4KxKkbAzZqb5gLa_J4a939Gfu7vpPnHcvSgHh8-ZrQIQ
+@studentToken = eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJzdHUxIiwiaWF0IjoxNzQ5Mjk5NzAwLCJleHAiOjE3NDkzMDU3NDh9.TroavlY8d5f2qq66_ej7XW9mi3X9n8-wrO8cEKGVCOHLQH_fJc-nVdCuHwuYlYXg8loseFwdpu2b6A1qXgkLow
+@assistantToken = eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhc3MxIiwiaWF0IjoxNzQ5Mjk5NjcwLCJleHAiOjE3NDkzMDU3MTh9.XE2GyWJAwPvpAN8X4cbCkHe1p5QONOjS0Q0iMAk9HCwuD1oCrpjb5aE_PjvqFnLbt-iOPw2nkP8ZjlA8JTsn9A
+
+### ========== 用户管理API测试 ==========
+
+# 1. 用户注册测试
+POST {{baseUrl}}/api/users/register
+Content-Type: {{contentType}}
+
+{
+  "username": "testuser001",
+  "email": "testuser001@example.com",
+  "password": "password123"
+}
+
+### 2. 用户登录测试 - 管理员登录
+# @name login
+POST {{baseUrl}}/api/users/login
+Content-Type: {{contentType}}
+
+{
+  "username": "user1",
+  "password": "string",
+  "role": "ADMIN"
+}
+
+### 3. 用户登录测试 - 教师登录
+POST {{baseUrl}}/api/users/login
+Content-Type: {{contentType}}
+
+{
+  "username": "tea1",
+  "password": "string",
+  "role": "TEACHER"
+}
+
+### 4. 用户登录测试 - 学生登录
+POST {{baseUrl}}/api/users/login
+Content-Type: {{contentType}}
+
+{
+  "username": "stu1",
+  "password": "stu1",
+  "role": "STUDENT"
+}
+
+### 5. 获取个人资料 - 需要认证
+GET {{baseUrl}}/api/users/profile
+Authorization: Bearer {{token}}
+
+### 6. 更新个人资料 - 需要认证
+PUT {{baseUrl}}/api/users/profile
+Authorization: {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "avatar": "new_avatar_url",
+  "profile": {
+    "realName": "张三",
+    "phoneNumber": "13800138000",
+    "description": "更新的个人简介"
+  }
+}
+
+### 7. 修改密码 - 需要认证
+PUT {{baseUrl}}/api/users/password?oldPassword=admin123&newPassword=newadmin123
+Authorization: Bearer {{adminToken}}
+
+### 8. 分页查询用户列表 - 管理员权限
+GET {{baseUrl}}/api/users?pageNum=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+### 9. 根据ID获取用户信息 - 管理员权限
+GET {{baseUrl}}/api/users/user_id_here
+Authorization: Bearer {{adminToken}}
+
+### 10. 上传用户头像 - 需要认证（需要使用form-data）
+# POST {{baseUrl}}/api/users/avatar
+# Authorization: {{adminToken}}
+# Content-Type: multipart/form-data
+# 注意：HTTP文件不能直接测试文件上传，需要使用Postman或其他工具
+
+### 11. 获取用户头像URL
+GET {{baseUrl}}/api/users/avatar/user_id_here
+Authorization: Bearer {{adminToken}}
+
+### 12. 设置用户角色 - 管理员权限
+POST {{baseUrl}}/api/users/setrole
+Authorization: {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "userId": "target_user_id",
+  "roleId": "ROLE_TEACHER"
+}
+
+### 13. 删除用户 - 管理员权限
+DELETE {{baseUrl}}/api/users/delete/0f64737b-65f7-4fcf-9901-17d6883096e4
+Authorization: Bearer {{adminToken}}
+
+### ========== 公告管理API测试 ==========
+
+# 14. 创建公告 - 向全体用户
+POST {{baseUrl}}/api/announcements
+Authorization: {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "系统维护通知",
+  "content": "系统将于明日凌晨2点进行维护，预计维护时间2小时，请提前保存工作内容。",
+  "receivers": "ALL"
+}
+
+### 15. 创建公告 - 向特定用户
+POST {{baseUrl}}/api/announcements
+Authorization: Bearer {{teacherToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "课程作业提醒",
+  "content": "请同学们注意，本周五之前完成第三章实验作业。",
+  "receivers": "student001,student002,student003"
+}
+
+### 16. 根据ID获取公告详情
+GET {{baseUrl}}/api/announcements/announcement_id_here
+Authorization: Bearer {{studentToken}}
+
+### 17. 根据接收者ID获取公告列表
+GET {{baseUrl}}/api/announcements/receiver/student001
+Authorization: Bearer {{studentToken}}
+
+### 18. 获取全部公告列表
+GET {{baseUrl}}/api/announcements
+Authorization: Bearer {{adminToken}}
+
+### 19. 删除公告
+DELETE {{baseUrl}}/api/announcements/announcement_id_here
+Authorization: Bearer {{adminToken}}
+
+### ========== 实验管理API测试 ==========
+
+# 20. 创建实验 - 教师权限
+POST {{baseUrl}}/api/experiments
+Authorization: Bearer {{teacherToken}}
+Content-Type: {{contentType}}
+
+{
+  "name": "Java基础编程实验",
+  "description": "本实验主要考查Java基础语法和面向对象编程概念",
+  "status": "DRAFT",
+  "startTime": "2024-01-15T09:00:00",
+  "endTime": "2024-01-31T23:59:59"
+}
+
+### 21. 创建实验 - 数据结构实验
+POST {{baseUrl}}/api/experiments
+Authorization: Bearer {{teacherToken}}
+Content-Type: {{contentType}}
+
+{
+  "name": "数据结构与算法实验",
+  "description": "通过编程实现各种数据结构和算法",
+  "status": "DRAFT",
+  "startTime": "2024-02-01T09:00:00",
+  "endTime": "2024-02-28T23:59:59"
+}
+
+### 22. 分页获取实验列表
+GET {{baseUrl}}/api/experiments?pageNum=1&pageSize=5
+Authorization: Bearer {{teacherToken}}
+
+### 23. 根据ID获取实验详情
+GET {{baseUrl}}/api/experiments/experiment_id_here
+Authorization: Bearer {{teacherToken}}
+
+### 24. 更新实验信息
+PUT {{baseUrl}}/api/experiments/experiment_id_here
+Authorization: Bearer {{teacherToken}}
+Content-Type: {{contentType}}
+
+{
+  "name": "Java基础编程实验（修订版）",
+  "description": "本实验主要考查Java基础语法、面向对象编程概念以及异常处理",
+  "status": "DRAFT",
+  "startTime": "2024-01-15T09:00:00",
+  "endTime": "2024-02-15T23:59:59"
+}
+
+### 25. 发布实验
+PUT {{baseUrl}}/api/experiments/experiment_id_here/publish
+Authorization: Bearer {{teacherToken}}
+
+### 26. 取消发布实验
+PUT {{baseUrl}}/api/experiments/experiment_id_here/unpublish
+Authorization: Bearer {{teacherToken}}
+
+### 27. 删除实验
+DELETE {{baseUrl}}/api/experiments/experiment_id_here
+Authorization: Bearer {{teacherToken}}
+
+### ========== 实验任务管理API测试 ==========
+
+# 28. 为实验添加编程任务
+POST {{baseUrl}}/api/experiments/tasks/experiment_id_here
+Authorization: Bearer {{teacherToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Hello World程序",
+  "description": "编写一个Java程序，输出Hello World",
+  "taskType": "CODE",
+  "question": {
+    "title": "Hello World",
+    "description": "请编写一个Java程序，输出'Hello World!'",
+    "requirements": ["使用System.out.println()方法", "类名必须为HelloWorld"]
+  },
+  "required": true
+}
+
+### 29. 为实验添加选择题任务
+POST {{baseUrl}}/api/experiments/tasks/experiment_id_here
+Authorization: Bearer {{teacherToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Java基础概念选择题",
+  "description": "测试Java基础概念的理解",
+  "taskType": "CHOICE",
+  "question": {
+    "title": "Java是什么类型的语言？",
+    "options": ["解释型语言", "编译型语言", "混合型语言", "脚本语言"],
+    "correctAnswer": 2
+  },
+  "required": true
+}
+
+### 30. 为实验添加填空题任务
+POST {{baseUrl}}/api/experiments/tasks/experiment_id_here
+Authorization: Bearer {{teacherToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Java语法填空",
+  "description": "填写正确的Java语法",
+  "taskType": "FILL",
+  "question": {
+    "title": "请填写完整的Java主方法声明",
+    "template": "public _____ void main(String[] _____)",
+    "blanks": ["static", "args"]
+  },
+  "required": false
+}
+
+### 31. 获取实验的所有任务
+GET {{baseUrl}}/api/experiments/tasks/experiment_id_here
+Authorization: Bearer {{teacherToken}}
+
+### 32. 更新任务信息
+PUT {{baseUrl}}/api/experiments/tasks/experiment_id_here/task_id_here
+Authorization: Bearer {{teacherToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Hello World程序（修订版）",
+  "description": "编写一个Java程序，输出Hello World，并添加注释",
+  "taskType": "CODE",
+  "question": {
+    "title": "Hello World with Comments",
+    "description": "请编写一个Java程序，输出'Hello World!'，并添加适当的注释",
+    "requirements": ["使用System.out.println()方法", "类名必须为HelloWorld", "添加类和方法的注释"]
+  },
+  "required": true
+}
+
+### 33. 删除任务
+DELETE {{baseUrl}}/api/experiments/tasks/experiment_id_here/task_id_here
+Authorization: Bearer {{teacherToken}}
+
+### 34. 调整任务顺序
+PUT {{baseUrl}}/api/experiments/tasks/experiment_id_here/order
+Authorization: Bearer {{teacherToken}}
+Content-Type: {{contentType}}
+
+[
+  {"taskId": "task_id_1", "orderNum": "1"},
+  {"taskId": "task_id_2", "orderNum": "2"},
+  {"taskId": "task_id_3", "orderNum": "3"}
+]
+
+### ========== 实验分配管理API测试 ==========
+
+# 35. 将任务分配给特定学生
+POST {{baseUrl}}/api/experiments/assignments/task_id_here/users
+Authorization: Bearer {{teacherToken}}
+Content-Type: {{contentType}}
+
+["student001", "student002", "student003"]
+
+### 36. 将任务分配给所有学生
+POST {{baseUrl}}/api/experiments/assignments/task_id_here/all
+Authorization: Bearer {{teacherToken}}
+
+### 37. 获取任务分配列表
+GET {{baseUrl}}/api/experiments/assignments/task_id_here
+Authorization: Bearer {{teacherToken}}
+
+### 38. 取消学生的任务分配
+DELETE {{baseUrl}}/api/experiments/assignments/task_id_here/users/student_id_here
+Authorization: Bearer {{teacherToken}}
+
+### ========== 学生实验参与API测试 ==========
+
+# 39. 学生获取可参与的实验列表
+GET {{baseUrl}}/api/student/experiments
+Authorization: Bearer {{studentToken}}
+
+### 40. 学生获取特定实验详情
+GET {{baseUrl}}/api/student/experiments/experiment_id_here
+Authorization: Bearer {{studentToken}}
+
+### 41. 学生获取分配给自己的所有任务
+GET {{baseUrl}}/api/student/experiments/tasks
+Authorization: Bearer {{studentToken}}
+
+### 42. 学生获取特定任务详情
+GET {{baseUrl}}/api/student/experiments/tasks/task_id_here
+Authorization: Bearer {{studentToken}}
+
+### 43. 学生提交编程任务
+POST {{baseUrl}}/api/student/experiments/tasks/submit
+Authorization: {{studentToken}}
+Content-Type: {{contentType}}
+
+{
+  "taskId": "programming_task_id",
+  "experimentId": "experiment_id_here",
+  "files": [
+    {
+      "fileName": "HelloWorld.java",
+      "content": "public class HelloWorld {\n    public static void main(String[] args) {\n        System.out.println(\"Hello World!\");\n    }\n}",
+      "language": "java"
+    }
+  ]
+}
+
+### 44. 学生提交选择题答案
+POST {{baseUrl}}/api/student/experiments/tasks/submit
+Authorization: Bearer {{studentToken}}
+Content-Type: {{contentType}}
+
+{
+  "taskId": "choice_task_id",
+  "experimentId": "experiment_id_here",
+  "userAnswer": 2
+}
+
+### 45. 学生提交填空题答案
+POST {{baseUrl}}/api/student/experiments/tasks/submit
+Authorization: Bearer {{studentToken}}
+Content-Type: {{contentType}}
+
+{
+  "taskId": "fill_task_id",
+  "experimentId": "experiment_id_here",
+  "userAnswer": ["static", "args"]
+}
+
+### 46. 学生获取任务评测结果
+GET {{baseUrl}}/api/student/experiments/tasks/task_id_here/result
+Authorization: Bearer {{studentToken}}
+
+### 47. 学生获取任务历史评测记录
+GET {{baseUrl}}/api/student/experiments/tasks/task_id_here/history
+Authorization: Bearer {{studentToken}}
+
+### ========== 资源管理API测试 ==========
+
+# 48. 上传实验学习资料（需要使用form-data）
+# POST {{baseUrl}}/api/resources/upload
+# Authorization: Bearer {{teacherToken}}
+# Content-Type: multipart/form-data
+# 注意：这里需要实际的文件上传，HTTP文件无法模拟
+
+### 49. 获取实验资源列表
+GET {{baseUrl}}/api/resources/experiment/experiment_id_here
+Authorization: Bearer {{studentToken}}
+
+### 50. 获取任务资源列表
+GET {{baseUrl}}/api/resources/task/task_id_here
+Authorization: Bearer {{studentToken}}
+
+### 51. 下载资源文件
+GET {{baseUrl}}/api/resources/download/resource_id_here
+Authorization: Bearer {{studentToken}}
+
+### 52. 获取资源信息
+GET {{baseUrl}}/api/resources/resource_id_here
+Authorization: Bearer {{teacherToken}}
+
+### 53. 删除资源
+DELETE {{baseUrl}}/api/resources/resource_id_here
+Authorization: Bearer {{teacherToken}}
+
+### ========== 消息通知API测试 ==========
+
+# 54. 管理员发送系统通知
+POST {{baseUrl}}/api/messages
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "系统升级通知",
+  "content": "系统将在今晚进行版本升级，可能会有短暂的服务中断。",
+  "receiver": "ALL"
+}
+
+### 55. 教师向学生发送消息
+POST {{baseUrl}}/api/messages
+Authorization: Bearer {{teacherToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "实验截止提醒",
+  "content": "请注意，Java基础编程实验将在本周五截止，请及时完成提交。",
+  "receiver": "stu1"
+}
+
+### 56. 获取接收到的消息列表
+GET {{baseUrl}}/api/messages/received
+Authorization: Bearer {{studentToken}}
+
+### 57. 获取发送的消息列表
+GET {{baseUrl}}/api/messages/sent
+Authorization: Bearer {{teacherToken}}
+
+### 58. 根据ID获取消息详情
+GET {{baseUrl}}/api/messages/message_id_here
+Authorization: Bearer {{studentToken}}
+
+### 59. 标记消息为已读
+PUT {{baseUrl}}/api/messages/message_id_here/read
+Authorization: Bearer {{studentToken}}
+
+### 60. 删除消息
+DELETE {{baseUrl}}/api/messages/message_id_here
+Authorization: Bearer {{studentToken}}
+
+### 61. 获取发送者信息列表
+Authorization: Bearer {{studentToken}}
+
+### ========== 讨论管理API测试 ==========
+
+# 62. 创建讨论帖子
+POST {{baseUrl}}/api/discussions
+Authorization: Bearer {{studentToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "关于Java继承的问题",
+  "content": "在实现继承时，子类构造方法应该如何调用父类构造方法？",
+  "tags": ["Java", "继承", "构造方法"],
+  "experimentId": "experiment_id_here"
+}
+
+### 63. 获取讨论列表
+GET {{baseUrl}}/api/discussions?pageNum=1&pageSize=10
+Authorization: Bearer {{studentToken}}
+
+### 64. 根据实验ID获取讨论列表
+GET {{baseUrl}}/api/discussions/experiment/experiment_id_here?pageNum=1&pageSize=10
+Authorization: Bearer {{studentToken}}
+
+### 65. 根据ID获取讨论详情
+GET {{baseUrl}}/api/discussions/discussion_id_here
+Authorization: Bearer {{studentToken}}
+
+### 66. 更新讨论帖子
+PUT {{baseUrl}}/api/discussions/discussion_id_here
+Authorization: Bearer {{studentToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "关于Java继承的问题（已补充代码）",
+  "content": "在实现继承时，子类构造方法应该如何调用父类构造方法？\n\n补充示例代码：\nclass Parent { ... }",
+  "tags": ["Java", "继承", "构造方法", "示例代码"]
+}
+
+### 67. 删除讨论帖子
+DELETE {{baseUrl}}/api/discussions/discussion_id_here
+Authorization: Bearer {{studentToken}}
+
+### 68. 审核讨论帖子 - 通过
+PUT {{baseUrl}}/api/discussions/discussion_id_here/review
+Authorization: Bearer {{teacherToken}}
+Content-Type: {{contentType}}
+
+{
+  "status": "APPROVED"
+}
+
+### 69. 审核讨论帖子 - 拒绝
+PUT {{baseUrl}}/api/discussions/discussion_id_here/review
+Authorization: Bearer {{teacherToken}}
+Content-Type: {{contentType}}
+
+{
+  "status": "REJECTED",
+  "rejectionReason": "讨论内容与实验主题不符，请重新组织内容后再次发布。"
+}
+
+### 70. 点赞讨论帖子
+POST {{baseUrl}}/api/discussions/discussion_id_here/like
+Authorization: Bearer {{studentToken}}
+
+### 71. 取消点赞讨论帖子
+DELETE {{baseUrl}}/api/discussions/discussion_id_here/like
+Authorization: Bearer {{studentToken}}
+
+### ========== 评论管理API测试 ==========
+
+# 72. 为讨论添加评论
+POST {{baseUrl}}/api/comments
+Authorization: Bearer {{studentToken}}
+Content-Type: {{contentType}}
+
+{
+  "discussionId": "discussion_id_here",
+  "content": "可以使用super()关键字来调用父类的构造方法。",
+  "parentId": null
+}
+
+### 73. 回复评论（子评论）
+POST {{baseUrl}}/api/comments
+Authorization: Bearer {{teacherToken}}
+Content-Type: {{contentType}}
+
+{
+  "discussionId": "discussion_id_here",
+  "content": "正确！super()必须是子类构造方法的第一条语句。",
+  "parentId": "parent_comment_id_here"
+}
+
+### 74. 获取讨论的评论列表
+GET {{baseUrl}}/api/comments/discussion/discussion_id_here?pageNum=1&pageSize=20
+Authorization: Bearer {{studentToken}}
+
+### 75. 根据ID获取评论详情
+GET {{baseUrl}}/api/comments/comment_id_here
+Authorization: Bearer {{studentToken}}
+
+### 76. 更新评论内容
+PUT {{baseUrl}}/api/comments/comment_id_here
+Authorization: Bearer {{studentToken}}
+Content-Type: {{contentType}}
+
+{
+  "content": "可以使用super()关键字来调用父类的构造方法。另外，如果不显式调用，编译器会自动插入super()。"
+}
+
+### 77. 删除评论
+DELETE {{baseUrl}}/api/comments/comment_id_here
+Authorization: Bearer {{studentToken}}
+
+### 78. 点赞评论
+POST {{baseUrl}}/api/comments/comment_id_here/like
+Authorization: Bearer {{studentToken}}
+
+### 79. 取消点赞评论
+DELETE {{baseUrl}}/api/comments/comment_id_here/like
+Authorization: Bearer {{studentToken}}
+
+### ========== 题目管理API测试 ==========
+
+# 80. 创建编程题目
+POST {{baseUrl}}/api/questions
+Authorization: Bearer {{teacherToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "两数之和",
+  "description": "给定一个整数数组nums和一个目标值target，请找出和为目标值的两个整数的下标。",
+  "type": "CODE",
+  "difficulty": "EASY",
+  "testCases": [
+    {
+      "input": "[2,7,11,15], 9",
+      "expectedOutput": "[0,1]"
+    },
+    {
+      "input": "[3,2,4], 6",
+      "expectedOutput": "[1,2]"
+    }
+  ],
+  "tags": ["数组", "哈希表", "双指针"]
+}
+
+### 81. 创建选择题目
+POST {{baseUrl}}/api/questions
+Authorization: Bearer {{teacherToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Java访问修饰符",
+  "description": "以下哪个访问修饰符的访问范围最广？",
+  "type": "CHOICE",
+  "difficulty": "EASY",
+  "options": ["private", "protected", "public", "default"],
+  "correctAnswer": 2,
+  "tags": ["Java", "访问修饰符", "基础概念"]
+}
+
+### 82. 分页获取题目列表
+GET {{baseUrl}}/api/questions?pageNum=1&pageSize=10&type=CODE&difficulty=EASY
+Authorization: Bearer {{teacherToken}}
+
+### 83. 根据ID获取题目详情
+GET {{baseUrl}}/api/questions/question_id_here
+Authorization: Bearer {{teacherToken}}
+
+### 84. 更新题目信息
+PUT {{baseUrl}}/api/questions/question_id_here
+Authorization: Bearer {{teacherToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "两数之和（优化版）",
+  "description": "给定一个整数数组nums和一个目标值target,请找出和为目标值的两个整数的下标。要求时间复杂度为O(n)。",
+  "type": "CODE",
+  "difficulty": "MEDIUM",
+  "testCases": [
+    {
+      "input": "[2,7,11,15], 9",
+      "expectedOutput": "[0,1]"
+    },
+    {
+      "input": "[3,2,4], 6",
+      "expectedOutput": "[1,2]"
+    },
+    {
+      "input": "[3,3], 6",
+      "expectedOutput": "[0,1]"
+    }
+  ],
+  "tags": ["数组", "哈希表", "算法优化"]
+}
+
+### 85. 删除题目
+DELETE {{baseUrl}}/api/questions/question_id_here
+Authorization: Bearer {{teacherToken}}
+
+### 86. 根据标签搜索题目
+GET {{baseUrl}}/api/questions/search?tags=Java,数组&pageNum=1&pageSize=10
+Authorization: Bearer {{teacherToken}}
+
+### ========== 错误场景测试 ==========
+
+# 87. 测试无效的登录请求
+POST {{baseUrl}}/api/users/login
+Content-Type: {{contentType}}
+
+{
+  "username": "nonexistent_user",
+  "password": "wrong_password"
+}
+
+### 88. 测试未授权访问管理员接口
+GET {{baseUrl}}/api/users
+Authorization: Bearer {{studentToken}}
+
+### 89. 测试无效的实验创建请求
+POST {{baseUrl}}/api/experiments
+Authorization: Bearer {{teacherToken}}
+Content-Type: {{contentType}}
+
+{
+  "name": "",
+  "description": "缺少实验名称的测试"
+}
+
+### 90. 测试访问不存在的资源
+GET {{baseUrl}}/api/experiments/nonexistent_experiment_id
+Authorization: Bearer {{teacherToken}}
+
+### ========== 边界条件测试 ==========
+
+# 91. 测试分页查询边界条件
+GET {{baseUrl}}/api/experiments?pageNum=1&pageSize=1
+Authorization: Bearer {{teacherToken}}
+
+### 92. 测试空内容的公告创建
+POST {{baseUrl}}/api/announcements
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "空内容测试",
+  "content": "",
+  "receivers": "ALL"
+}
+
+### 93. 测试长文本内容的讨论创建
+POST {{baseUrl}}/api/discussions
+Authorization: Bearer {{studentToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "长文本测试讨论",
+  "content": "这是一个非常长的讨论内容，用于测试系统对长文本的处理能力。".repeat(100),
+  "tags": ["测试", "长文本"],
+  "experimentId": "experiment_id_here"
+}
+
+### ========== 并发场景测试 ==========
+
+# 94. 并发提交相同任务（模拟多次快速提交）
+POST {{baseUrl}}/api/student/experiments/tasks/submit
+Authorization: Bearer {{studentToken}}
+Content-Type: {{contentType}}
+
+{
+  "taskId": "concurrent_test_task_id",
+  "experimentId": "experiment_id_here",
+  "userAnswer": "并发测试答案1"
+}
+
+### 95. 并发提交相同任务（第二次）
+POST {{baseUrl}}/api/student/experiments/tasks/submit
+Authorization: Bearer {{studentToken}}
+Content-Type: {{contentType}}
+
+{
+  "taskId": "concurrent_test_task_id",
+  "experimentId": "experiment_id_here",
+  "userAnswer": "并发测试答案2"
+}
+
+### ========== 性能测试场景 ==========
+
+# 96. 大量数据的分页查询测试
+GET {{baseUrl}}/api/users?pageNum=1&pageSize=100
+Authorization: Bearer {{adminToken}}
+
+### 97. 复杂查询条件的实验搜索
+GET {{baseUrl}}/api/experiments?pageNum=1&pageSize=50
+Authorization: Bearer {{teacherToken}}
+
+### ========== 数据完整性测试 ==========
+
+# 98. 测试关联数据的级联操作
+DELETE {{baseUrl}}/api/experiments/experiment_with_tasks_id
+Authorization: Bearer {{teacherToken}}
+
+### 99. 测试外键约束
+POST {{baseUrl}}/api/experiments/tasks/nonexistent_experiment_id
+Authorization: Bearer {{teacherToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "测试任务",
+  "description": "为不存在的实验创建任务",
+  "taskType": "OTHER",
+  "required": false
+}
