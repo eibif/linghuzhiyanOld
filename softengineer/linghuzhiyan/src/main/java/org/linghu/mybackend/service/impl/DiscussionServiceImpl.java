@@ -33,7 +33,6 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 
-import static org.springframework.data.jpa.repository.query.KeysetScrollSpecification.createSort;
 
 @Service
 @RequiredArgsConstructor
@@ -93,7 +92,7 @@ public class DiscussionServiceImpl implements DiscussionService {
         Sort sort = createSort(sortBy, order);
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        Page<Discussion> discussions;
+    // removed unused local variable "discussions"
 
         // 构建基础查询
         Query query = new Query();
@@ -101,13 +100,33 @@ public class DiscussionServiceImpl implements DiscussionService {
 
         // 添加过滤条件
         if (status != null && !status.isEmpty()) {
+            // 显式指定状态则按指定状态过滤
             query.addCriteria(Criteria.where("status").is(status));
         } else {
-            // 默认只显示已审核通过的
-            if(highestRole.equals("ROLE_STUDENT")) {
-                query.addCriteria(Criteria.where("status").is("APPROVED"));
+            // 未指定状态时的默认展示规则
+            if ("ROLE_STUDENT".equals(highestRole)) {
+                // 学生：默认看到所有已审核通过的 + 自己创建的任意状态讨论
+                if (userId != null && !userId.isEmpty()) {
+                    if (currentUserId != null && userId.equals(currentUserId)) {
+                        // 查询自己时：不过滤状态（展示自己全部状态）
+                    } else {
+                        // 查询他人时：只展示已审核通过的
+                        query.addCriteria(Criteria.where("status").is("APPROVED"));
+                    }
+                } else if (currentUserId != null) {
+                    // 未指定 userId：展示 (status=APPROVED) OR (userId=当前学生)
+                    query.addCriteria(new Criteria().orOperator(
+                            Criteria.where("status").is("APPROVED"),
+                            Criteria.where("userId").is(currentUserId)
+                    ));
+                } else {
+                    // 理论上学生应有 currentUserId；兜底为只展示已审核通过的
+                    query.addCriteria(Criteria.where("status").is("APPROVED"));
+                }
+            } else {
+                // 非学生（管理员/老师/助教）：默认可见全部状态
+                query.addCriteria(Criteria.where("status").in(Arrays.asList("APPROVED", "PENDING", "REJECTED")));
             }
-            else query.addCriteria(Criteria.where("status").in(Arrays.asList("APPROVED", "PENDING"," REJECTED")));
         }
 
         if (tags != null && tags.length > 0) {
@@ -182,18 +201,30 @@ public class DiscussionServiceImpl implements DiscussionService {
 
     @Override
     public boolean deleteDiscussion(String id, String userId) {
-        Discussion discussion = discussionRepository.findByIdAndNotDeleted(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Discussion not found with id: " + id));
+        // 幂等删除：若不存在或已删除，直接视为成功
+        Discussion existing = mongoTemplate.findById(id, Discussion.class);
+        if (existing == null) {
+            return true;
+        }
+        if (Boolean.TRUE.equals(existing.getDeleted())) {
+            return true;
+        }
 
-        // 验证是否是创建者
-        if (!discussion.getUserId().equals(userId)) {
+        // 验证是否是创建者（兼容历史数据 userId 存用户名的情况）
+        boolean isOwner = false;
+        if (userId != null) {
+            if (userId.equals(existing.getUserId()) || userId.equals(existing.getUsername())) {
+                isOwner = true;
+            }
+        }
+        if (!isOwner) {
             throw new UnauthorizedException("You are not authorized to delete this discussion");
         }
 
         // 软删除
-        discussion.setDeleted(true);
-        discussion.setUpdateTime(LocalDateTime.now());
-        discussionRepository.save(discussion);
+        existing.setDeleted(true);
+        existing.setUpdateTime(LocalDateTime.now());
+        discussionRepository.save(existing);
         return true;
     }
 
@@ -289,26 +320,14 @@ public class DiscussionServiceImpl implements DiscussionService {
         }
 
         // 映射API参数到字段名称
-        String fieldName;
-        switch (sortBy) {
-            case "createTime":
-                fieldName = "createTime";
-                break;
-            case "lastActivityTime":
-                fieldName = "lastActivityTime";
-                break;
-            case "likeCount":
-                fieldName = "likeCount";
-                break;
-            case "commentCount":
-                fieldName = "commentCount";
-                break;
-            case "viewCount":
-                fieldName = "viewCount";
-                break;
-            default:
-                fieldName = "lastActivityTime";
-        }
+        String fieldName = switch (sortBy) {
+            case "createTime" -> "createTime";
+            case "lastActivityTime" -> "lastActivityTime";
+            case "likeCount" -> "likeCount";
+            case "commentCount" -> "commentCount";
+            case "viewCount" -> "viewCount";
+            default -> "lastActivityTime";
+        };
 
         // 创建排序
         Sort sort;
