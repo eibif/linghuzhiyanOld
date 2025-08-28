@@ -30,9 +30,9 @@ pipeline {
                 dir('softengineer/linghuzhiyan') {
                     script {
                         if (isUnix()) {
-                            sh "docker build -t ${DOCKER_IMAGE} ."
+                            sh "docker compose up -d --build ."
                         } else {
-                            bat "docker build -t ${DOCKER_IMAGE} ."
+                            bat "docker compose up -d --build ."
                         }
                     }
                 }
