@@ -2,7 +2,6 @@ pipeline {
     agent any
     environment {
         IMAGE_NAME = "linghuzhiyan-app"
-        DOCKER_IMAGE = "${IMAGE_NAME}:${BUILD_NUMBER}"
         KUBE_CONFIG = credentials('kubeconfig') // Jenkins凭据ID
     }
     stages {
@@ -30,9 +29,9 @@ pipeline {
                 dir('softengineer/linghuzhiyan') {
                     script {
                         if (isUnix()) {
-                            sh "docker compose up -d --build ."
+                            sh "docker compose up -d --build"
                         } else {
-                            bat "docker compose up -d --build ."
+                            bat "docker compose up -d --build"
                         }
                     }
                 }
