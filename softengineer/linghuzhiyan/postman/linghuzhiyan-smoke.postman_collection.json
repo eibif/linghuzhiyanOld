@@ -1,0 +1,240 @@
+{
+  "info": {
+    "name": "LingHuZhiYan E2E Smoke",
+    "description": "端到端用例：管理员登录→注册教师/学生→赋予教师角色→发公告/消息→教师创建并发布实验与任务→管理员分配→学生获取与发讨论",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
+    { "key": "authHeader", "value": "", "type": "string" },
+    { "key": "adminUsername", "value": "user1", "type": "string" },
+    { "key": "adminPassword", "value": "string", "type": "string" },
+    { "key": "teacherUsername", "value": "teacher01", "type": "string" },
+    { "key": "teacherEmail", "value": "teacher01@example.com", "type": "string" },
+    { "key": "teacherPassword", "value": "Tpass123", "type": "string" },
+    { "key": "studentUsername", "value": "student01", "type": "string" },
+    { "key": "studentEmail", "value": "student01@example.com", "type": "string" },
+    { "key": "studentPassword", "value": "Spass123", "type": "string" },
+    { "key": "teacherAuth", "value": "", "type": "string" },
+    { "key": "studentAuth", "value": "", "type": "string" },
+    { "key": "teacherUserId", "value": "", "type": "string" },
+    { "key": "studentUserId", "value": "", "type": "string" },
+    { "key": "experimentId", "value": "", "type": "string" },
+    { "key": "taskId", "value": "", "type": "string" },
+    { "key": "announcementId", "value": "", "type": "string" },
+    { "key": "messageId", "value": "", "type": "string" },
+    { "key": "discussionId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "01 - Admin Login",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/users/login", "host": ["{{baseUrl}}"], "path": ["api","users","login"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\",\n  \"role\": \"ADMIN\"\n}",
+          "options": { "raw": { "language": "json" } }
+        }
+      },
+      "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "const json = pm.response.json();",
+        "pm.test('HTTP 200', () => pm.response.code === 200);",
+        "pm.test('业务码 200', () => json && json.code === 200);",
+        "pm.test('返回 token', () => json && json.data && json.data.token);",
+        "if (json && json.data) { pm.collectionVariables.set('authHeader', `${json.data.tokenType} ${json.data.token}`); }"
+      ] } } ]
+    },
+    {
+      "name": "02 - Register Teacher",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/users/register", "host": ["{{baseUrl}}"], "path": ["api","users","register"] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{teacherUsername}}\",\n  \"email\": \"{{teacherEmail}}\",\n  \"password\": \"{{teacherPassword}}\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200/或用户名已存在(400)', () => [200,400].includes(pm.response.code));"
+      ] } } ]
+    },
+    {
+      "name": "03 - Register Student",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/users/register", "host": ["{{baseUrl}}"], "path": ["api","users","register"] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{studentUsername}}\",\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"{{studentPassword}}\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200/或用户名已存在(400)', () => [200,400].includes(pm.response.code));"
+      ] } } ]
+    },
+    {
+      "name": "04 - Admin Get Users to Capture IDs",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "{{authHeader}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/users?pageNum=1&pageSize=100", "host": ["{{baseUrl}}"], "path": ["api","users"], "query": [ {"key":"pageNum","value":"1"}, {"key":"pageSize","value":"100"} ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "const json = pm.response.json();",
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const list = (json && json.data && json.data.list) || [];",
+        "const t = list.find(u => u.username===pm.collectionVariables.get('teacherUsername'));",
+        "const s = list.find(u => u.username===pm.collectionVariables.get('studentUsername'));",
+        "pm.collectionVariables.set('teacherUserId', (t && t.id) || '');",
+        "pm.collectionVariables.set('studentUserId', (s && s.id) || '');",
+        "pm.test('拿到 teacherUserId', () => !!pm.collectionVariables.get('teacherUserId'));",
+        "pm.test('拿到 studentUserId', () => !!pm.collectionVariables.get('studentUserId'));"
+      ] } } ]
+    },
+    {
+      "name": "05 - Admin Set Teacher Role",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{authHeader}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/users/setrole", "host": ["{{baseUrl}}"], "path": ["api","users","setrole"] },
+        "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{teacherUserId}}\",\n  \"roleId\": \"ROLE_TEACHER\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);"
+      ] } } ]
+    },
+    {
+      "name": "06 - Admin Create Announcement",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{authHeader}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/announcements", "host": ["{{baseUrl}}"], "path": ["api","announcements"] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"测试公告\",\n  \"content\": \"这是一条由自动化集成测试创建的公告\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "const json = pm.response.json();",
+        "if (json && json.data && json.data.id) pm.collectionVariables.set('announcementId', json.data.id);"
+      ] } } ]
+    },
+    {
+      "name": "07 - Admin Send Message to Student",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{authHeader}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/messages", "host": ["{{baseUrl}}"], "path": ["api","messages"] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"测试消息\",\n  \"content\": \"这是一条发给学生的测试消息\",\n  \"receiver\": \"{{studentUsername}}\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "const json = pm.response.json();",
+        "if (json && json.data && json.data.id) pm.collectionVariables.set('messageId', json.data.id);"
+      ] } } ]
+    },
+    {
+      "name": "08 - Teacher Login",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/users/login", "host": ["{{baseUrl}}"], "path": ["api","users","login"] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{teacherUsername}}\",\n  \"password\": \"{{teacherPassword}}\",\n  \"role\": \"TEACHER\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "const json = pm.response.json();",
+        "pm.collectionVariables.set('teacherAuth', `${json.data.tokenType} ${json.data.token}`);"
+      ] } } ]
+    },
+    {
+      "name": "09 - Teacher Create Experiment",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/experiments", "host": ["{{baseUrl}}"], "path": ["api","experiments"] },
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"自动化实验\",\n  \"description\": \"由集成测试创建的实验\",\n  \"status\": \"DRAFT\",\n  \"startTime\": \"2030-01-01T00:00:00\",\n  \"endTime\": \"2030-12-31T23:59:59\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "const json = pm.response.json();",
+        "pm.collectionVariables.set('experimentId', (json.data && json.data.id) || '');",
+        "pm.test('拿到 experimentId', () => !!pm.collectionVariables.get('experimentId'));"
+      ] } } ]
+    },
+    {
+      "name": "09.5 - Teacher Publish Experiment",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/experiments/{{experimentId}}/publish", "host": ["{{baseUrl}}"], "path": ["api","experiments","{{experimentId}}","publish"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);"
+      ] } } ]
+    },
+    {
+      "name": "10 - Teacher Add Task",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/experiments/tasks/{{experimentId}}", "host": ["{{baseUrl}}"], "path": ["api","experiments","tasks","{{experimentId}}"] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"任务一\",\n  \"description\": \"简单题示例\",\n  \"taskType\": \"OTHER\",\n  \"question\": [\"2+2=?\", \"4\"],\n  \"required\": true\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "const json = pm.response.json();",
+        "pm.collectionVariables.set('taskId', (json.data && json.data.id) || '');",
+        "pm.test('拿到 taskId', () => !!pm.collectionVariables.get('taskId'));"
+      ] } } ]
+    },
+    {
+      "name": "11 - Admin Assign Task To Student",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{authHeader}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/experiments/assignments/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["api","experiments","assignments","{{taskId}}"] },
+        "body": { "mode": "raw", "raw": "{\n  \"userIds\": [\"{{studentUserId}}\"]\n}" }
+      }
+    },
+    {
+      "name": "12 - Student Login",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/users/login", "host": ["{{baseUrl}}"], "path": ["api","users","login"] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{studentUsername}}\",\n  \"password\": \"{{studentPassword}}\",\n  \"role\": \"STUDENT\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "const json = pm.response.json();",
+        "pm.collectionVariables.set('studentAuth', `${json.data.tokenType} ${json.data.token}`);"
+      ] } } ]
+    },
+    {
+      "name": "13 - Student Get Announcements",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/announcements", "host":["{{baseUrl}}"], "path":["api","announcements"] }
+      }
+    },
+    {
+      "name": "14 - Student Get Messages",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages/receiver", "host":["{{baseUrl}}"], "path":["api","messages","receiver"] }
+      }
+    },
+    {
+      "name": "15 - Student Get My Experiments",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/student/experiments", "host":["{{baseUrl}}"], "path":["api","student","experiments"] }
+      }
+    },
+    {
+      "name": "15b - Student Get Assigned Tasks",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/student/experiments/tasks", "host":["{{baseUrl}}"], "path":["api","student","experiments","tasks"] }
+      }
+    },
+    {
+      "name": "16 - Student Create Discussion",
+      "request": { "method": "POST", "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/discussions", "host":["{{baseUrl}}"], "path":["api","discussions"] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"关于自动化实验的讨论\",\n  \"content\": \"这是学生就分配的实验发起的讨论。\",\n  \"richContent\": { \"html\": \"<p>这是更丰富的讨论内容</p>\", \"delta\": {} },\n  \"tags\": [\"实验\", \"讨论\"],\n  \"experimentId\": \"{{experimentId}}\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "const json = pm.response.json();",
+        "if (json && json.data && json.data.id) pm.collectionVariables.set('discussionId', json.data.id);"
+      ] } } ]
+  }
+  ]
+}
