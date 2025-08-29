@@ -51,6 +51,9 @@ public class SecurityConfig {
                         // 允许公开访问的URL
                         .requestMatchers("/api/users/register", "/api/users/login",
                                 "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/api/announcements/**").permitAll()
+                        // 允许Actuator健康检查端点匿名访问
+                        .requestMatchers("/actuator/health/**", "/actuator/health").permitAll()
+                        .requestMatchers("/actuator/info", "/actuator/metrics").permitAll()
                         // 其他请求需要认证
                         .anyRequest().authenticated()
                 )
