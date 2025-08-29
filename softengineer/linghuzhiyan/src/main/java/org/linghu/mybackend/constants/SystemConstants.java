@@ -28,6 +28,9 @@ public final class SystemConstants {
     public static final int DEFAULT_PAGE_SIZE = 10;
     public static final int DEFAULT_PAGE_NUM = 1;
 
+    // 默认头像URL
+    public static final String DEFAULT_AVATAR_URL = "/static/images/default-avatar.png";
+
     private SystemConstants() {
         // 私有构造函数，防止实例化
     }

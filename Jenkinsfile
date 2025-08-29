@@ -29,9 +29,22 @@ pipeline {
                 dir('softengineer/linghuzhiyan') {
                     script {
                         if (isUnix()) {
-                            sh "docker compose up -d --build"
+                            sh "docker build -t ${IMAGE_NAME}:latest ."
                         } else {
-                            bat "docker compose up -d --build"
+                            bat "docker build -t ${IMAGE_NAME}:latest ."
+                        }
+                    }
+                }
+            }
+        }
+        stage('Run Docker Compose') {
+            steps {
+                dir('softengineer/linghuzhiyan') {
+                    script {
+                        if (isUnix()) {
+                            sh "docker compose up -d"
+                        } else {
+                            bat "docker compose up -d"
                         }
                     }
                 }

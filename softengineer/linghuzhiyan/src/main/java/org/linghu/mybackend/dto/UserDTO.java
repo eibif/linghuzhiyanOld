@@ -1,6 +1,7 @@
 package org.linghu.mybackend.dto;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.util.Set;
@@ -9,6 +10,7 @@ import java.util.Set;
  * 用户数据传输对象
  */
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserDTO {
