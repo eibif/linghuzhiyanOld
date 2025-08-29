@@ -33,4 +33,19 @@ public interface MessageService {
      * 获取给指定接收者发送消息的所有发送者信息（用户名、id、权限等级）
      */
     List<SenderInfoDTO> getSendersByReceiver(String receiverUsername);
+
+    /**
+     * 发送系统通知
+     */
+    void sendSystemNotification(String title, String content, List<String> receiverIds);
+
+    /**
+     * 发送实验通知
+     */
+    void sendExperimentNotification(String title, String content, String experimentId, List<String> receiverIds);
+
+    /**
+     * 发送成绩通知
+     */
+    void sendGradeNotification(String title, String content, String experimentId, String receiverId);
 }

@@ -1,6 +1,7 @@
 package org.linghu.mybackend.dto;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import jakarta.validation.constraints.Size;
@@ -10,6 +11,7 @@ import jakarta.validation.constraints.Size;
  * 只包含允许用户更新的字段
  */
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProfileUpdateDTO {

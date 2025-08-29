@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: linghuzhiyan-test
+  
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/test_db
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    database-platform: org.hibernate.dialect.H2Dialect
+    open-in-view: false
+
+jwt:
+  tokenHeader: Authorization
+  secret: linghuzhiyan-test-secret-key-must-be-at-least-32-characters-long-for-security-testing
+  expiration: 604800
+  tokenHead: Bearer
+
+logging:
+  level:
+    org.linghu.mybackend: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+
+minio:
+  endpoint: http://localhost:9000
+  accessKey: minioadmin
+  secretKey: minioadmin
+  bucketName: test-bucket
