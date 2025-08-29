@@ -6,9 +6,11 @@
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
+  { "key": "runId", "value": "", "type": "string" },
     { "key": "authHeader", "value": "", "type": "string" },
     { "key": "adminUsername", "value": "user1", "type": "string" },
     { "key": "adminPassword", "value": "string", "type": "string" },
+  { "key": "adminUserId", "value": "", "type": "string" },
     { "key": "teacherUsername", "value": "teacher01", "type": "string" },
     { "key": "teacherEmail", "value": "teacher01@example.com", "type": "string" },
     { "key": "teacherPassword", "value": "Tpass123", "type": "string" },
@@ -19,6 +21,7 @@
   { "key": "student2Email", "value": "student02@example.com", "type": "string" },
   { "key": "student2Password", "value": "Spass123", "type": "string" },
     { "key": "teacherAuth", "value": "", "type": "string" },
+  { "key": "assistantAuth", "value": "", "type": "string" },
     { "key": "studentAuth", "value": "", "type": "string" },
   { "key": "student2Auth", "value": "", "type": "string" },
     { "key": "teacherUserId", "value": "", "type": "string" },
@@ -28,7 +31,9 @@
   { "key": "taskId", "value": "", "type": "string" },
   { "key": "taskId2", "value": "", "type": "string" },
     { "key": "announcementId", "value": "", "type": "string" },
-    { "key": "messageId", "value": "", "type": "string" },
+  { "key": "messageId", "value": "", "type": "string" },
+    { "key": "messageIdFromTeacher", "value": "", "type": "string" },
+  { "key": "assistantMessageId", "value": "", "type": "string" },
   { "key": "discussionId", "value": "", "type": "string" },
   { "key": "commentId", "value": "", "type": "string" },
   { "key": "replyCommentId", "value": "", "type": "string" }
@@ -51,7 +56,8 @@
   "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
         "pm.test('业务码 200', () => json && json.code === 200);",
         "pm.test('返回 token', () => json && json.data && json.data.token);",
-        "if (json && json.data) { pm.collectionVariables.set('authHeader', `${json.data.tokenType} ${json.data.token}`); }"
+  "if (json && json.data) { pm.collectionVariables.set('authHeader', `${json.data.tokenType} ${json.data.token}`); }",
+  "if (!pm.collectionVariables.get('runId')) { pm.collectionVariables.set('runId', String(Date.now())); }"
       ] } } ]
     },
     {
@@ -104,16 +110,48 @@
     "const json = pm.response.json();",
   "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
         "const list = (json && json.data && json.data.list) || [];",
+    "const me = list.find(u => u.username===pm.collectionVariables.get('adminUsername'));",
     "const t = list.find(u => u.username===pm.collectionVariables.get('teacherUsername'));",
     "const s = list.find(u => u.username===pm.collectionVariables.get('studentUsername'));",
     "const s2 = list.find(u => u.username===pm.collectionVariables.get('student2Username'));",
+        "pm.collectionVariables.set('adminUserId', (me && me.id) || '');",
         "pm.collectionVariables.set('teacherUserId', (t && t.id) || '');",
         "pm.collectionVariables.set('studentUserId', (s && s.id) || '');",
     "pm.collectionVariables.set('student2UserId', (s2 && s2.id) || '');",
+    "pm.test('拿到 adminUserId', () => !!pm.collectionVariables.get('adminUserId'));",
         "pm.test('拿到 teacherUserId', () => !!pm.collectionVariables.get('teacherUserId'));",
   "pm.test('拿到 studentUserId', () => !!pm.collectionVariables.get('studentUserId'));",
   "pm.test('拿到 student2UserId', () => !!pm.collectionVariables.get('student2UserId'));",
   "pm.test('业务码 200', () => json && json.code === 200)"
+      ] } } ]
+    },
+    {
+      "name": "05a - Admin Set Self Assistant Role",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{authHeader}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/users/setrole", "host": ["{{baseUrl}}"], "path": ["api","users","setrole"] },
+        "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{adminUserId}}\",\n  \"roleId\": \"ROLE_ASSISTANT\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200 或 100008(已拥有)', () => json && (json.code===200 || json.code===100008));"
+      ] } } ]
+    },
+    {
+      "name": "05b - Admin Login As Assistant",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/users/login", "host": ["{{baseUrl}}"], "path": ["api","users","login"] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\",\n  \"role\": \"ASSISTANT\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "pm.collectionVariables.set('assistantAuth', `${json.data.tokenType} ${json.data.token}`);"
       ] } } ]
     },
     {
@@ -152,7 +190,7 @@
         "method": "POST",
         "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{authHeader}}" } ],
         "url": { "raw": "{{baseUrl}}/api/messages", "host": ["{{baseUrl}}"], "path": ["api","messages"] },
-        "body": { "mode": "raw", "raw": "{\n  \"title\": \"测试消息\",\n  \"content\": \"这是一条发给学生的测试消息\",\n  \"receiver\": \"{{studentUsername}}\"\n}" }
+  "body": { "mode": "raw", "raw": "{\n  \"title\": \"测试消息-{{runId}}\",\n  \"content\": \"这是一条发给学生的测试消息\",\n  \"receiver\": \"{{studentUsername}}\",\n  \"senderRole\": \"ROLE_ADMIN\"\n}" }
       },
       "event": [ { "listen": "test", "script": { "exec": [
         "const json = pm.response.json();",
@@ -174,6 +212,38 @@
   "pm.collectionVariables.set('teacherAuth', `${json.data.tokenType} ${json.data.token}`);",
   "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
   "pm.test('返回 token', () => json && json.data && json.data.token);"
+      ] } } ]
+    },
+    {
+      "name": "08a - Teacher Send Message to Student",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/messages", "host": ["{{baseUrl}}"], "path": ["api","messages"] },
+  "body": { "mode": "raw", "raw": "{\n  \"title\": \"老师给学生的通知-{{runId}}\",\n  \"content\": \"请按时完成实验任务\",\n  \"receiver\": \"{{studentUsername}}\",\n  \"senderRole\": \"ROLE_TEACHER\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "if(json && json.data && json.data.id){ pm.collectionVariables.set('messageIdFromTeacher', json.data.id); }",
+        "pm.test('拿到 messageIdFromTeacher', () => !!pm.collectionVariables.get('messageIdFromTeacher'));"
+      ] } } ]
+    },
+    {
+      "name": "08aa - Assistant(Admin) Send Message to Student",
+      "request": {
+        "method": "POST",
+  "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{assistantAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/messages", "host": ["{{baseUrl}}"], "path": ["api","messages"] },
+  "body": { "mode": "raw", "raw": "{\n  \"title\": \"助教给学生的通知-{{runId}}\",\n  \"content\": \"来自管理员(助教身份)的消息\",\n  \"receiver\": \"{{studentUsername}}\",\n  \"senderRole\": \"ROLE_ASSISTANT\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "if(json && json.data && json.data.id){ pm.collectionVariables.set('assistantMessageId', json.data.id); }",
+        "pm.test('拿到 assistantMessageId', () => !!pm.collectionVariables.get('assistantMessageId'));"
       ] } } ]
     },
     {
@@ -433,10 +503,149 @@
       },
       "event": [ { "listen": "test", "script": { "exec": [
   "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
-        "const json = pm.response.json();",
-        "pm.test('业务码 200', () => json && json.code === 200)"
+  "const json = pm.response.json();",
+  "pm.test('业务码 200', () => json && json.code === 200);",
+  "const list = (json && Array.isArray(json.data)) ? json.data : [];",
+  "const runId = pm.collectionVariables.get('runId');",
+  "const filtered = list.filter(m => m && typeof m.title==='string' && m.title.includes(runId));",
+        "pm.test('本次运行产生的消息共3条', () => filtered.length === 3);",
+  "const aname = pm.collectionVariables.get('adminUsername');",
+  "const tname = pm.collectionVariables.get('teacherUsername');",
+  "const senders = filtered.map(m => m.sender);",
+  "pm.test('发送者包含管理员', () => senders.includes(aname));",
+  "pm.test('发送者包含老师', () => senders.includes(tname));",
+  "const fromTeacher = filtered.find(m => m.sender===tname);",
+  "if(fromTeacher && fromTeacher.id){ pm.collectionVariables.set('messageIdFromTeacher', fromTeacher.id); }",
+  "pm.test('记录老师消息ID', () => !!pm.collectionVariables.get('messageIdFromTeacher'));"
       ] } } ]
     },
+    {
+      "name": "14.1 - Student Get Message Senders",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages/senders", "host": ["{{baseUrl}}"], "path": ["api","messages","senders"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){};",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+        "const tname = pm.collectionVariables.get('teacherUsername');",
+        "const aname = pm.collectionVariables.get('adminUsername');",
+        "const hasTeacher = arr.some(s => s && (s.senderUsername===tname));",
+        "const hasAdmin = arr.some(s => s && (s.senderUsername===aname));",
+        "pm.test('发送者列表包含老师', () => hasTeacher);",
+        "pm.test('发送者列表包含管理员', () => hasAdmin);"
+      ] } } ]
+    },
+    {
+      "name": "14.2 - Student Get Messages From Teacher",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages/sender/{{teacherUsername}}", "host": ["{{baseUrl}}"], "path": ["api","messages","sender","{{teacherUsername}}"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){};",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+        "const runId = pm.collectionVariables.get('runId');",
+        "const mine = arr.filter(m => m && typeof m.title==='string' && m.title.includes(runId));",
+        "pm.test('老师本次发送的消息仅1条', () => mine.length===1);",
+        "if(mine[0] && mine[0].id){ pm.collectionVariables.set('messageIdFromTeacher', mine[0].id); }",
+        "pm.test('已记录老师消息ID', () => !!pm.collectionVariables.get('messageIdFromTeacher'));"
+      ] } } ]
+    },
+    {
+      "name": "14.3 - Student Mark Teacher Message Read",
+      "request": { "method": "PUT", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages/{{messageIdFromTeacher}}/read", "host": ["{{baseUrl}}"], "path": ["api","messages","{{messageIdFromTeacher}}","read"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "pm.test('消息状态为已读', () => json && json.data && json.data.status==='已读');"
+      ] } } ]
+    },
+    {
+      "name": "14.4 - Admin Get All Messages For This Run (expect 3)",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{authHeader}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages/all", "host": ["{{baseUrl}}"], "path": ["api","messages","all"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){};",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+        "const runId = pm.collectionVariables.get('runId');",
+        "const mine = arr.filter(m => m && typeof m.title==='string' && m.title.includes(runId));",
+        "pm.test('本次运行消息共3条(管理员视角)', () => mine.length===3);"
+      ] } } ]
+    },
+    {
+      "name": "14.5 - Admin Get Self Sent Messages (current role expect 1)",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{authHeader}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages/self/sent", "host": ["{{baseUrl}}"], "path": ["api","messages","self","sent"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){};",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+        "const runId = pm.collectionVariables.get('runId');",
+        "const mine = arr.filter(m => m && typeof m.title==='string' && m.title.includes(runId));",
+        "pm.test('以管理员当前权限发送的消息仅1条', () => mine.length===1);"
+      ] } } ]
+    },
+    {
+      "name": "14.6 - Admin Delete Assistant Message",
+      "request": { "method": "DELETE", "header": [ {"key":"Authorization","value":"{{authHeader}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages/{{assistantMessageId}}", "host": ["{{baseUrl}}"], "path": ["api","messages","{{assistantMessageId}}"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200/204/404', () => [200,204,404].includes(pm.response.code));"
+      ] } } ]
+    },
+    {
+      "name": "14.7 - Teacher Delete Own Message",
+      "request": { "method": "DELETE", "header": [ {"key":"Authorization","value":"{{teacherAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages/{{messageIdFromTeacher}}", "host": ["{{baseUrl}}"], "path": ["api","messages","{{messageIdFromTeacher}}"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200/204/404', () => [200,204,404].includes(pm.response.code));"
+      ] } } ]
+    },
+    {
+      "name": "14.8 - Student Get Messages (after deletions)",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages/receiver", "host":["{{baseUrl}}"], "path":["api","messages","receiver"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code === 200);",
+        "const list = (json && Array.isArray(json.data)) ? json.data : [];",
+        "const runId = pm.collectionVariables.get('runId');",
+        "const filtered = list.filter(m => m && typeof m.title==='string' && m.title.includes(runId));",
+        "pm.test('删除后本次运行消息数量减少(<=1)', () => filtered.length <= 1);"
+      ] } } ]
+    },
+    {
+      "name": "14.9 - Student Get Message Senders (after deletions)",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages/senders", "host": ["{{baseUrl}}"], "path": ["api","messages","senders"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){};",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+        "const tname = pm.collectionVariables.get('teacherUsername');",
+        "const aname = pm.collectionVariables.get('adminUsername');",
+        "const hasTeacher = arr.some(s => s && (s.senderUsername===tname));",
+        "const hasAdmin = arr.some(s => s && (s.senderUsername===aname));",
+        "pm.test('删除后发送者集合应减少(老师或管理员至少有一方可能不在)', () => !(hasTeacher && hasAdmin));"
+      ] } } ]
+  },
     {
       "name": "15 - Student Get My Experiments",
       "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
