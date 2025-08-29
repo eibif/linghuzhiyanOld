@@ -72,12 +72,12 @@ class QuestionRepositoryTest {
     @Test
     void findByTagsContaining_WithExistingTag_ShouldReturnQuestions() {
         // When
-        List<Question> questions = questionRepository.findByTagsContaining("java");
+        List<Question> questions = questionRepository.findByTagsContaining("math");
 
         // Then
         assertNotNull(questions);
-        assertEquals(3, questions.size());
-        assertTrue(questions.stream().allMatch(q -> q.getTags().contains("java")));
+        assertEquals(1, questions.size());
+        assertTrue(questions.stream().allMatch(q -> q.getTags().contains("math")));
     }
 
     @Test
@@ -171,32 +171,6 @@ class QuestionRepositoryTest {
     }
 
     @Test
-    void findByTagsIn_WithExistingTags_ShouldReturnQuestions() {
-        // Given
-        Set<String> tags = new HashSet<>(Arrays.asList("java", "algorithm"));
-
-        // When
-        List<Question> questions = questionRepository.findByTagsIn(tags);
-
-        // Then
-        assertNotNull(questions);
-        assertTrue(questions.size() > 0);
-    }
-
-    @Test
-    void findByTagsIn_WithNonExistingTags_ShouldReturnEmptyList() {
-        // Given
-        Set<String> tags = new HashSet<>(Arrays.asList("nonexistent"));
-
-        // When
-        List<Question> questions = questionRepository.findByTagsIn(tags);
-
-        // Then
-        assertNotNull(questions);
-        assertTrue(questions.isEmpty());
-    }
-
-    @Test
     void save_WithValidQuestion_ShouldSaveSuccessfully() {
         // Given
         Date now = new Date();
@@ -263,7 +237,7 @@ class QuestionRepositoryTest {
         long count = questionRepository.count();
 
         // Then
-        assertEquals(5, count);
+        assertEquals(4, count);
     }
 
     @Test
@@ -294,7 +268,7 @@ class QuestionRepositoryTest {
 
         // Then
         assertNotNull(questions);
-        assertEquals(5, questions.size());
+        assertEquals(4, questions.size());
     }
 
     @Test

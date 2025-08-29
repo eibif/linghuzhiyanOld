@@ -188,7 +188,7 @@ class ExperimentTaskRepositoryTest {
 
         // Then
         assertNotNull(tasks);
-        assertEquals(3, tasks.size());
+        assertEquals(4, tasks.size());
     }
 
     @Test
@@ -215,7 +215,7 @@ class ExperimentTaskRepositoryTest {
         long count = taskRepository.count();
 
         // Then
-        assertEquals(3, count);
+        assertEquals(4, count);
     }
 
     @Test

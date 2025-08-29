@@ -71,11 +71,11 @@ public class ExperimentSubmission {
     private User grader;
     
     // 创建和更新时间戳
-    @Column(name = "created_at")
+    @Column(name = "created_time")
     @Temporal(TemporalType.TIMESTAMP)
     private LocalDateTime createdAt;
     
-    @Column(name = "updated_at")
+    @Column(name = "updated_time")
     @Temporal(TemporalType.TIMESTAMP)
     private LocalDateTime updatedAt;
 

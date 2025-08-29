@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -43,7 +44,7 @@ public interface ExperimentSubmissionRepository extends JpaRepository<Experiment
      * @param endDate 结束时间
      * @return 提交记录列表
      */
-    List<ExperimentSubmission> findByTaskIdAndSubmitTimeBetween(String taskId, Date startDate, Date endDate);
+    List<ExperimentSubmission> findByTaskIdAndSubmitTimeBetween(String taskId, LocalDateTime startDate, LocalDateTime endDate);
     
     /**
      * 根据评分人ID查询提交记录
@@ -78,7 +79,7 @@ public interface ExperimentSubmissionRepository extends JpaRepository<Experiment
      * @param endDate 结束时间
      * @return 提交记录列表
      */
-    List<ExperimentSubmission> findBySubmitTimeBetween(Date startDate, Date endDate);
+    List<ExperimentSubmission> findBySubmitTimeBetween(LocalDateTime startDate, LocalDateTime endDate);
     
     /**
      * 根据任务ID和用户答案内容模糊查询提交记录

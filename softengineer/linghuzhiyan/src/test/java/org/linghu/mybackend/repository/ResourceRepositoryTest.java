@@ -28,7 +28,7 @@ class ResourceRepositoryTest {
     @Test
     void findByExperimentId_ShouldReturnResources_WhenExperimentExists() {
         // Given
-        String experimentId = "exp-001";
+        String experimentId = "experiment1";
 
         // When
         List<Resource> resources = resourceRepository.findByExperimentId(experimentId);
@@ -88,7 +88,7 @@ class ResourceRepositoryTest {
     @Test
     void findByExperimentIdAndResourceType_ShouldReturnResources_WhenBothMatch() {
         // Given
-        String experimentId = "exp-001";
+        String experimentId = "experiment1";
         Resource.ResourceType resourceType = Resource.ResourceType.DOCUMENT;
 
         // When
@@ -105,7 +105,7 @@ class ResourceRepositoryTest {
     @Test
     void findByExperimentIdAndResourceType_ShouldReturnEmptyList_WhenNoMatch() {
         // Given
-        String experimentId = "exp-001";
+        String experimentId = "experiment1";
         Resource.ResourceType resourceType = Resource.ResourceType.VIDEO; // exp-001没有VIDEO类型
 
         // When
@@ -183,7 +183,7 @@ class ResourceRepositoryTest {
     @Test
     void existsByExperimentId_ShouldReturnTrue_WhenExperimentHasResources() {
         // Given
-        String experimentId = "exp-001";
+        String experimentId = "experiment1";
 
         // When
         boolean exists = resourceRepository.existsByExperimentId(experimentId);
@@ -247,7 +247,7 @@ class ResourceRepositoryTest {
         assertThat(resourceOpt).isPresent();
         assertThat(resourceOpt.get().getId()).isEqualTo(resourceId);
         assertThat(resourceOpt.get().getFileName()).isEqualTo("test1.pdf");
-        assertThat(resourceOpt.get().getExperimentId()).isEqualTo("exp-001");
+        assertThat(resourceOpt.get().getExperimentId()).isEqualTo("experiment1");
     }
 
     @Test

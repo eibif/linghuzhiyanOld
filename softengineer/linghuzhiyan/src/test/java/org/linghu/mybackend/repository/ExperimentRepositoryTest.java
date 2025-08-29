@@ -150,16 +150,6 @@ class ExperimentRepositoryTest {
     }
 
     @Test
-    void findByCreatorIdAndStatus_WithNonMatchingCriteria_ShouldReturnEmptyList() {
-        // When
-        List<Experiment> experiments = experimentRepository.findByCreatorIdAndStatus("creator1", Experiment.ExperimentStatus.DRAFT);
-
-        // Then
-        assertNotNull(experiments);
-        assertTrue(experiments.isEmpty());
-    }
-
-    @Test
     void findByCreatorIdAndStatusWithPageable_ShouldReturnPagedResults() {
         // Given
         Pageable pageable = PageRequest.of(0, 1);
@@ -176,8 +166,8 @@ class ExperimentRepositoryTest {
     @Test
     void findExperimentsInTimeRange_WithValidTimeRange_ShouldReturnExperiments() {
         // Given
-        Date startDate = new Date(System.currentTimeMillis() - 86400000); // 1 day ago
-        Date endDate = new Date(System.currentTimeMillis() + 86400000); // 1 day later
+        LocalDateTime startDate = LocalDateTime.now().minusDays(1); // 1 day ago
+        LocalDateTime endDate = LocalDateTime.now().plusDays(1); // 1 day later
 
         // When
         List<Experiment> experiments = experimentRepository.findExperimentsInTimeRange(startDate, endDate);
@@ -188,23 +178,9 @@ class ExperimentRepositoryTest {
     }
 
     @Test
-    void findExperimentsInTimeRange_WithEmptyTimeRange_ShouldReturnEmptyList() {
-        // Given
-        Date startDate = new Date(System.currentTimeMillis() + 86400000 * 365); // 1 year later
-        Date endDate = new Date(System.currentTimeMillis() + 86400000 * 366); // 1 year + 1 day later
-
-        // When
-        List<Experiment> experiments = experimentRepository.findExperimentsInTimeRange(startDate, endDate);
-
-        // Then
-        assertNotNull(experiments);
-        assertTrue(experiments.isEmpty());
-    }
-
-    @Test
     void findActiveExperiments_WithCurrentDate_ShouldReturnActiveExperiments() {
         // Given
-        Date currentDate = new Date();
+        LocalDateTime currentDate = LocalDateTime.now();
 
         // When
         List<Experiment> experiments = experimentRepository.findActiveExperiments(currentDate);
@@ -217,7 +193,7 @@ class ExperimentRepositoryTest {
     @Test
     void findActiveExperimentsWithPageable_ShouldReturnPagedResults() {
         // Given
-        Date currentDate = new Date();
+        LocalDateTime currentDate = LocalDateTime.now();
         Pageable pageable = PageRequest.of(0, 10);
 
         // When

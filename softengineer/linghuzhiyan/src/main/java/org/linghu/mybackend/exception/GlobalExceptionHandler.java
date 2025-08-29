@@ -52,25 +52,6 @@ public class GlobalExceptionHandler {
         result.setMessage("权限不足，无法访问该资源");
         return new ResponseEntity<>(result, HttpStatus.FORBIDDEN);
     }
-    // /**
-    //  * 处理实验相关异常
-    //  */
-    // @ExceptionHandler(ExperimentException.class)
-    // @ResponseStatus(HttpStatus.OK)
-    // public Result<Void> handleExperimentException(ExperimentException e) {
-    //     log.warn("Experiment exception: {} - {}", e.getCode(), e.getMessage());
-    //     return Result.failure(e.getCode(), e.getMessage());
-    // }
-    
-    // /**
-    //  * 处理讨论相关异常
-    //  */
-    // @ExceptionHandler(DiscussionException.class)
-    // @ResponseStatus(HttpStatus.OK)
-    // public Result<Void> handleDiscussionException(DiscussionException e) {
-    //     log.warn("Discussion exception: {} - {}", e.getCode(), e.getMessage());
-    //     return Result.failure(e.getCode(), e.getMessage());
-    // }
 
     /**
      * 处理业务异常

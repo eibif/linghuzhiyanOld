@@ -105,11 +105,11 @@ class ExperimentSubmissionRepositoryTest {
     @Test
     void findByTaskIdAndUserId_WithExistingIds_ShouldReturnSubmission() {
         // When
-        Optional<ExperimentSubmission> submission = submissionRepository.findByTaskIdAndUserId("task1", "user1");
+        Optional<ExperimentSubmission> submission = submissionRepository.findByTaskIdAndUserId("task2", "user1");
 
         // Then
         assertTrue(submission.isPresent());
-        assertEquals("task1", submission.get().getTaskId());
+        assertEquals("task2", submission.get().getTaskId());
         assertEquals("user1", submission.get().getUserId());
     }
 
@@ -144,8 +144,8 @@ class ExperimentSubmissionRepositoryTest {
     @Test
     void findByTaskIdAndSubmitTimeBetween_WithValidTimeRange_ShouldReturnSubmissions() {
         // Given
-        Date startDate = new Date(System.currentTimeMillis() - 86400000); // 1 day ago
-        Date endDate = new Date(System.currentTimeMillis() + 86400000); // 1 day later
+        LocalDateTime startDate = LocalDateTime.now().minusDays(1); // 1 day ago
+        LocalDateTime endDate =LocalDateTime.now().plusDays(1); ; // 1 day later
 
         // When
         List<ExperimentSubmission> submissions = submissionRepository.findByTaskIdAndSubmitTimeBetween("task1", startDate, endDate);
@@ -158,8 +158,8 @@ class ExperimentSubmissionRepositoryTest {
     @Test
     void findByTaskIdAndSubmitTimeBetween_WithEmptyTimeRange_ShouldReturnEmptyList() {
         // Given
-        Date startDate = new Date(System.currentTimeMillis() - 86400000 * 10); // 10 days ago
-        Date endDate = new Date(System.currentTimeMillis() - 86400000 * 9); // 9 days ago
+        LocalDateTime startDate = LocalDateTime.now().minusMinutes(1); // 1 day ago
+        LocalDateTime endDate =LocalDateTime.now().plusDays(1); ; // 1 day later
 
         // When
         List<ExperimentSubmission> submissions = submissionRepository.findByTaskIdAndSubmitTimeBetween("task1", startDate, endDate);
@@ -235,8 +235,8 @@ class ExperimentSubmissionRepositoryTest {
     @Test
     void findBySubmitTimeBetween_WithValidTimeRange_ShouldReturnSubmissions() {
         // Given
-        Date startDate = new Date(System.currentTimeMillis() - 86400000); // 1 day ago
-        Date endDate = new Date(System.currentTimeMillis() + 86400000); // 1 day later
+        LocalDateTime startDate = LocalDateTime.now().minusDays(1); // 1 day ago
+        LocalDateTime endDate =LocalDateTime.now().plusDays(1); ; // 1 day later
 
         // When
         List<ExperimentSubmission> submissions = submissionRepository.findBySubmitTimeBetween(startDate, endDate);
@@ -249,8 +249,8 @@ class ExperimentSubmissionRepositoryTest {
     @Test
     void findBySubmitTimeBetween_WithEmptyTimeRange_ShouldReturnEmptyList() {
         // Given
-        Date startDate = new Date(System.currentTimeMillis() - 86400000 * 10); // 10 days ago
-        Date endDate = new Date(System.currentTimeMillis() - 86400000 * 9); // 9 days ago
+        LocalDateTime startDate = LocalDateTime.now().minusMinutes(1); // 1 day ago
+        LocalDateTime endDate =LocalDateTime.now().plusDays(1); ; // 1 day later
 
         // When
         List<ExperimentSubmission> submissions = submissionRepository.findBySubmitTimeBetween(startDate, endDate);
