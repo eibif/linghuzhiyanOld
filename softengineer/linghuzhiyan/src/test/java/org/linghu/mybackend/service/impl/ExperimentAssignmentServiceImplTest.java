@@ -367,12 +367,12 @@ class ExperimentAssignmentServiceImplTest {
         void shouldAssignTaskToAllStudents() {
             // Given
             List<User> allUsers = Arrays.asList(testStudent, testTeacher);
-            
-            // 注意：实际实现调用的是experimentRepository.findById而不是experimentTaskRepository
-            when(experimentRepository.findById("task1")).thenReturn(Optional.of(new org.linghu.mybackend.domain.Experiment()));
-            // 同时需要mock experimentTaskRepository.findById，因为batchAssignTask会调用它
+
+            // assignTaskToAllStudents会调用experimentTaskRepository.findById来验证任务存在
             when(experimentTaskRepository.findById("task1")).thenReturn(Optional.of(testTask));
+            // getAllStudentUsers会调用userRepository.findAll()来获取所有用户
             when(userRepository.findAll()).thenReturn(allUsers);
+            // batchAssignTask会再次调用experimentTaskRepository.findById
             when(assignmentRepository.existsByTaskIdAndUserId("task1", "user1")).thenReturn(false);
             when(userRepository.findById("user1")).thenReturn(Optional.of(testStudent));
             when(assignmentRepository.save(any(ExperimentAssignment.class))).thenReturn(testAssignment);
@@ -381,23 +381,21 @@ class ExperimentAssignmentServiceImplTest {
             assertDoesNotThrow(() -> assignmentService.assignTaskToAllStudents("task1"));
 
             // Then
-            verify(experimentRepository).findById("task1");
+            verify(experimentTaskRepository, atLeastOnce()).findById("task1");
             verify(userRepository).findAll();
-            verify(assignmentRepository).save(any(ExperimentAssignment.class));
         }
 
         @Test
         @DisplayName("任务不存在时分配给所有学生抛出异常")
         void shouldThrowExceptionWhenTaskNotExistsForAllStudents() {
             // Given
-            when(experimentRepository.findById("nonexistent")).thenReturn(Optional.empty());
-
+            when(experimentTaskRepository.findById("nonexistent")).thenReturn(Optional.empty());
             // When & Then
-            RuntimeException exception = assertThrows(RuntimeException.class, 
-                () -> assignmentService.assignTaskToAllStudents("nonexistent"));
+            RuntimeException exception = assertThrows(RuntimeException.class,
+                    () -> assignmentService.assignTaskToAllStudents("nonexistent"));
             assertEquals("实验任务不存在", exception.getMessage());
-            
-            verify(experimentRepository).findById("nonexistent");
+
+            verify(experimentTaskRepository).findById("nonexistent");
             verify(userRepository, never()).findAll();
         }
 
@@ -405,8 +403,6 @@ class ExperimentAssignmentServiceImplTest {
         @DisplayName("无学生用户时完成分配但不保存")
         void shouldCompleteWithoutAssignmentsWhenNoStudents() {
             // Given
-            when(experimentRepository.findById("task1")).thenReturn(Optional.of(new org.linghu.mybackend.domain.Experiment()));
-            // 同时需要mock experimentTaskRepository.findById，因为batchAssignTask会调用它
             when(experimentTaskRepository.findById("task1")).thenReturn(Optional.of(testTask));
             when(userRepository.findAll()).thenReturn(Collections.emptyList());
 
@@ -414,9 +410,33 @@ class ExperimentAssignmentServiceImplTest {
             assertDoesNotThrow(() -> assignmentService.assignTaskToAllStudents("task1"));
 
             // Then
-            verify(experimentRepository).findById("task1");
+            verify(experimentTaskRepository,times(2)).findById("task1");
             verify(userRepository).findAll();
             verify(assignmentRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("分配给所有学生时跳过已分配的用户")
+        void shouldSkipAlreadyAssignedUsersWhenAssignToAllStudents() {
+            // Given
+            List<User> allUsers = Arrays.asList(testStudent, testTeacher);
+
+            when(experimentTaskRepository.findById("task1")).thenReturn(Optional.of(testTask));
+            when(userRepository.findAll()).thenReturn(allUsers);
+            when(assignmentRepository.existsByTaskIdAndUserId("task1", "user1")).thenReturn(true); // 已分配
+            when(assignmentRepository.existsByTaskIdAndUserId("task1", "user2")).thenReturn(false);
+            when(userRepository.findById("user2")).thenReturn(Optional.of(testTeacher));
+            when(assignmentRepository.save(any(ExperimentAssignment.class))).thenReturn(testAssignment);
+
+            // When
+            assertDoesNotThrow(() -> assignmentService.assignTaskToAllStudents("task1"));
+
+            // Then
+            verify(experimentTaskRepository, times(2)).findById("task1");
+            verify(userRepository).findAll();
+            verify(assignmentRepository).existsByTaskIdAndUserId("task1", "user1");
+            verify(assignmentRepository).existsByTaskIdAndUserId("task1", "user2");
+            verify(assignmentRepository, times(1)).save(any(ExperimentAssignment.class));
         }
     }
 
