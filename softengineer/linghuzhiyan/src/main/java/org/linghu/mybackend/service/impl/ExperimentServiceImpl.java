@@ -1,10 +1,14 @@
 package org.linghu.mybackend.service.impl;
 
+import java.util.UUID;
+
 import org.linghu.mybackend.domain.Experiment;
 import org.linghu.mybackend.domain.User;
 import org.linghu.mybackend.dto.ExperimentDTO;
 import org.linghu.mybackend.dto.ExperimentRequestDTO;
+import org.linghu.mybackend.repository.ExperimentAssignmentRepository;
 import org.linghu.mybackend.repository.ExperimentRepository;
+import org.linghu.mybackend.repository.ExperimentTaskRepository;
 import org.linghu.mybackend.repository.UserRepository;
 import org.linghu.mybackend.service.ExperimentService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,8 +18,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
-
 /**
  * 实验管理服务实现类
  */
@@ -24,11 +26,18 @@ public class ExperimentServiceImpl implements ExperimentService {
 
     private final ExperimentRepository experimentRepository;
     private final UserRepository userRepository;
+    private final ExperimentTaskRepository experimentTaskRepository;
+    private final ExperimentAssignmentRepository experimentAssignmentRepository;
 
     @Autowired
-    public ExperimentServiceImpl(ExperimentRepository experimentRepository, UserRepository userRepository) {
+    public ExperimentServiceImpl(ExperimentRepository experimentRepository,
+                                 UserRepository userRepository,
+                                 ExperimentTaskRepository experimentTaskRepository,
+                                 ExperimentAssignmentRepository experimentAssignmentRepository) {
         this.experimentRepository = experimentRepository;
         this.userRepository = userRepository;
+        this.experimentTaskRepository = experimentTaskRepository;
+        this.experimentAssignmentRepository = experimentAssignmentRepository;
     }
 
     @Override
@@ -95,9 +104,24 @@ public class ExperimentServiceImpl implements ExperimentService {
     @Override
     @Transactional
     public void deleteExperiment(String id) {
+        // 幂等：不存在则认为已删除
         if (!experimentRepository.existsById(id)) {
-            throw new RuntimeException("实验不存在");
+            return;
         }
+
+        // 先删除与该实验相关的任务分配记录和任务，再删实验，避免外键约束失败
+        var tasks = experimentTaskRepository.findByExperimentId(id);
+        if (tasks != null && !tasks.isEmpty()) {
+            for (var task : tasks) {
+                try {
+                    experimentAssignmentRepository.deleteByTaskId(task.getId());
+                } catch (Exception ignored) {
+                    // 分配记录可能不存在，忽略
+                }
+            }
+            experimentTaskRepository.deleteByExperimentId(id);
+        }
+
         experimentRepository.deleteById(id);
     }
 
