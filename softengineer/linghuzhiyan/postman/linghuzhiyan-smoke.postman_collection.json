@@ -390,8 +390,97 @@
   "pm.test('业务码 200', () => json && json.code === 200);",
   "const payload = json && json.data; let items = []; if(payload){ if(Array.isArray(payload.items)) items=payload.items; else if(Array.isArray(payload.list)) items=payload.list; }",
         "const did = pm.collectionVariables.get('discussionId');",
-        "const found = items.some(it => it && (it.id===did));",
-        "pm.test('学生2能看到已通过讨论', () => found);"
+        "const target = items.find(it => it && (it.id===did));",
+        "pm.test('学生2能看到已通过讨论', () => !!target);",
+        "if(target){ pm.collectionVariables.set('discussionTitleBefore', target.title || ''); }"
+      ] } } ]
+    },
+    {
+      "name": "16.71 - Student2 Like Discussion",
+      "request": { "method": "POST", "header": [ {"key":"Authorization","value":"{{student2Auth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/discussions/{{discussionId}}/like", "host":["{{baseUrl}}"], "path":["api","discussions","{{discussionId}}","like"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){};",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "if(json && json.data && (typeof json.data.isLiked === 'boolean')) { pm.test('已点赞', () => json.data.isLiked === true); }"
+      ] } } ]
+    },
+    {
+      "name": "16.72 - Student2 Unlike Discussion",
+      "request": { "method": "POST", "header": [ {"key":"Authorization","value":"{{student2Auth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/discussions/{{discussionId}}/like", "host":["{{baseUrl}}"], "path":["api","discussions","{{discussionId}}","like"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){};",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "if(json && json.data && (typeof json.data.isLiked === 'boolean')) { pm.test('已取消点赞', () => json.data.isLiked === false); }"
+      ] } } ]
+    },
+    {
+      "name": "16.75 - Student1 Update Discussion (after approval)",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{studentAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/discussions/{{discussionId}}", "host": ["{{baseUrl}}"], "path": ["api","discussions","{{discussionId}}"] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"关于自动化实验的讨论-已编辑\",\n  \"content\": \"编辑后的正文内容\",\n  \"richContent\": { \"html\": \"<p>编辑后的富文本</p>\", \"delta\": {} },\n  \"tags\": [\"实验\", \"讨论\", \"已编辑\"],\n  \"experimentId\": \"{{experimentId}}\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "const json = pm.response.json();",
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "pm.test('更新返回同一ID', () => json && json.data && json.data.id===pm.collectionVariables.get('discussionId'));",
+        "if(json && json.data && json.data.title){ pm.collectionVariables.set('discussionTitleAfter', json.data.title); }",
+        "pm.test('标题已更新包含已编辑', () => json && json.data && json.data.title && json.data.title.includes('已编辑'));"
+      ] } } ]
+    },
+    {
+      "name": "16.76 - Student2 Get Discussions (still old content before re-approve)",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{student2Auth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/discussions?experimentId={{experimentId}}&page=0&size=10", "host":["{{baseUrl}}"], "path":["api","discussions"], "query":[{"key":"experimentId","value":"{{experimentId}}"},{"key":"page","value":"0"},{"key":"size","value":"10"}] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){}",
+        "pm.test('业务码 200', () => json && json.code === 200);",
+        "const payload = json && json.data; let items = []; if(payload){ if(Array.isArray(payload.items)) items=payload.items; else if(Array.isArray(payload.list)) items=payload.list; }",
+        "const did = pm.collectionVariables.get('discussionId');",
+        "const target = items.find(it => it && (it.id===did));",
+        "pm.test('仍可看到该讨论', () => !!target);",
+        "const before = pm.collectionVariables.get('discussionTitleBefore') || '';",
+        "pm.test('学生2仍看到编辑前标题', () => target && (target.title || '') === before);"
+      ] } } ]
+    },
+    {
+      "name": "16.77 - Admin Approve Discussion (after edit)",
+      "request": { "method": "PUT", "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{authHeader}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/discussions/{{discussionId}}/review", "host":["{{baseUrl}}"], "path":["api","discussions","{{discussionId}}","review"] },
+        "body": { "mode":"raw", "raw": "{\n  \"status\": \"APPROVED\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code===200);"
+      ] } } ]
+    },
+    {
+      "name": "16.78 - Student2 Get Discussions (now sees edited)",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{student2Auth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/discussions?experimentId={{experimentId}}&page=0&size=10", "host":["{{baseUrl}}"], "path":["api","discussions"], "query":[{"key":"experimentId","value":"{{experimentId}}"},{"key":"page","value":"0"},{"key":"size","value":"10"}] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){}",
+        "pm.test('业务码 200', () => json && json.code === 200);",
+        "const payload = json && json.data; let items = []; if(payload){ if(Array.isArray(payload.items)) items=payload.items; else if(Array.isArray(payload.list)) items=payload.list; }",
+        "const did = pm.collectionVariables.get('discussionId');",
+        "const target = items.find(it => it && (it.id===did));",
+        "pm.test('学生2能看到已再次审核的讨论', () => !!target);",
+        "const before = pm.collectionVariables.get('discussionTitleBefore') || '';",
+        "pm.test('标题已更新(不同于编辑前)', () => target && (target.title || '') !== before);",
+        "pm.test('标题包含已编辑', () => target && target.title && target.title.includes('已编辑'));"
       ] } } ]
     },
     {
