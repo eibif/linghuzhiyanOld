@@ -29,6 +29,24 @@ spec:
                   key: jwt-secret
             - name: TZ
               value: Asia/Shanghai
+            # 数据库连接配置
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:mysql://mysql:3306/user_service?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+            - name: SPRING_DATASOURCE_USERNAME
+              value: root
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: example
+            # MongoDB配置
+            - name: SPRING_DATA_MONGODB_URI
+              value: mongodb://root:example@mongo:27017/discussion_service?authSource=admin
+            # MinIO配置
+            - name: MINIO_ENDPOINT
+              value: http://minio:9000
+            - name: MINIO_ACCESS_KEY
+              value: minioadmin
+            - name: MINIO_SECRET_KEY
+              value: minioadmin
+            # go-judge评测服务配置
             - name: JUDGE_SERVICE_URL
               value: http://go-judge:5050
             - name: JUDGE_SERVICE_GRPC_URL
@@ -37,18 +55,39 @@ spec:
               value: "30"
             - name: JUDGE_SERVICE_MAX_RETRIES
               value: "3"
+          # 资源限制
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          # 启动探针，给应用更多时间启动
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 30
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
               port: 8080
-            initialDelaySeconds: 10
+            initialDelaySeconds: 30
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: 8080
-            initialDelaySeconds: 30
-            periodSeconds: 10
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 5
 ---
 apiVersion: v1
 kind: Service
