@@ -1,6 +1,12 @@
 package org.linghu.mybackend.service.impl;
 
-import lombok.RequiredArgsConstructor;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import org.linghu.mybackend.constants.SystemConstants;
 import org.linghu.mybackend.domain.Attachment;
 import org.linghu.mybackend.domain.Comment;
 import org.linghu.mybackend.domain.Discussion;
@@ -23,11 +29,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -156,9 +158,9 @@ public class CommentServiceImpl implements CommentService {
             int size,
             String currentUserId) {
         
-        // 验证评论存在
-        Comment comment = commentRepository.findByIdAndNotDeleted(commentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Comment not found with id: " + commentId));
+    // 验证评论存在（仅校验存在性，无需使用返回对象）
+    commentRepository.findByIdAndNotDeleted(commentId)
+        .orElseThrow(() -> new ResourceNotFoundException("Comment not found with id: " + commentId));
         
         Pageable pageable = PageRequest.of(page, size, Sort.by("createTime").ascending());
         Page<Comment> replies = commentRepository.findByParentId(commentId, pageable);
@@ -171,8 +173,21 @@ public class CommentServiceImpl implements CommentService {
         Comment comment = commentRepository.findByIdAndNotDeleted(commentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Comment not found with id: " + commentId));
         
-        // 验证是否是创建者
-        if (!comment.getUserId().equals(userId)) {
+        // 验证是否是创建者或具备特权角色（管理员/教师/助教）
+        boolean isOwner = comment.getUserId().equals(userId);
+        boolean isPrivileged = false;
+        try {
+            UserDTO operator = userService.getUserInfo(userId);
+            if (operator != null && operator.getRoles() != null) {
+                isPrivileged = operator.getRoles().contains(SystemConstants.ROLE_ADMIN)
+                        || operator.getRoles().contains(SystemConstants.ROLE_TEACHER)
+                        || operator.getRoles().contains(SystemConstants.ROLE_ASSISTANT);
+            }
+        } catch (Exception ignored) {
+            // 获取用户角色失败则按无特权处理
+        }
+
+        if (!isOwner && !isPrivileged) {
             throw new UnauthorizedException("You are not authorized to delete this comment");
         }
         
