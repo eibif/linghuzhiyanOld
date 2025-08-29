@@ -289,6 +289,42 @@
       ] } } ]
     },
     {
+      "name": "13.5 - Admin Update Announcement",
+      "request": {
+        "method": "PUT",
+        "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{authHeader}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/announcements/{{announcementId}}", "host":["{{baseUrl}}"], "path":["api","announcements","{{announcementId}}"] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"测试公告-已编辑\",\n  \"content\": \"这是一条由自动化测试修改后的公告\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code === 200);",
+        "pm.test('更新返回同一ID', () => json && json.data && json.data.id === pm.collectionVariables.get('announcementId'));",
+        "if(json && json.data){ pm.collectionVariables.set('announcementTitleAfter', json.data.title || ''); pm.collectionVariables.set('announcementContentAfter', json.data.content || ''); }",
+        "pm.test('标题包含已编辑', () => (pm.collectionVariables.get('announcementTitleAfter') || '').includes('已编辑'));"
+      ] } } ]
+    },
+    {
+      "name": "13.6 - Student Get Announcements (see updated)",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/announcements", "host":["{{baseUrl}}"], "path":["api","announcements"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){};",
+        "pm.test('业务码 200', () => json && json.code === 200);",
+        "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+        "const aid = pm.collectionVariables.get('announcementId');",
+        "const tAfter = pm.collectionVariables.get('announcementTitleAfter') || '';",
+        "const cAfter = pm.collectionVariables.get('announcementContentAfter') || '';",
+        "const it = arr.find(a => a && a.id===aid);",
+        "pm.test('学生能看到该公告', () => !!it);",
+        "pm.test('标题已更新', () => it && (it.title || '') === tAfter);",
+        "pm.test('内容已更新', () => it && (it.content || '') === cAfter);"
+      ] } } ]
+    },
+    {
       "name": "14 - Student Get Messages",
       "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/messages/receiver", "host":["{{baseUrl}}"], "path":["api","messages","receiver"] }
