@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
         - name: app
-          image: ghcr.io/eibif/linghuzhiyan:latest
-          imagePullPolicy: IfNotPresent
+          image: linghuzhiyan-app:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 8080
           env:
