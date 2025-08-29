@@ -22,7 +22,8 @@
     { "key": "taskId", "value": "", "type": "string" },
     { "key": "announcementId", "value": "", "type": "string" },
     { "key": "messageId", "value": "", "type": "string" },
-    { "key": "discussionId", "value": "", "type": "string" }
+  { "key": "discussionId", "value": "", "type": "string" },
+  { "key": "commentId", "value": "", "type": "string" }
   ],
   "item": [
     {
@@ -166,13 +167,13 @@
         "if (tid && uid) { pm.test('删除分配 成功', () => [200,204].includes(pm.response.code)); } else { pm.test('跳过删除分配', () => true); }"
       ] } } ]
     },
-    { "name": "Cleanup: Teacher Delete Task", "request": { "method": "DELETE", "header": [ {"key":"Authorization","value":"{{teacherAuth}}"} ], "url": { "raw": "{{baseUrl}}/api/experiments/tasks/{{experimentId}}/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["api","experiments","tasks","{{experimentId}}","{{taskId}}"] } },
+  { "name": "Cleanup: Teacher Delete Task", "request": { "method": "DELETE", "header": [ {"key":"Authorization","value":"{{teacherAuth}}"} ], "url": { "raw": "{{baseUrl}}/api/experiments/tasks/{{experimentId}}/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["api","experiments","tasks","{{experimentId}}","{{taskId}}"] } },
       "event": [ { "listen": "prerequest", "script": { "exec": [
         "if(!pm.collectionVariables.get('taskId')){ postman.setNextRequest('Cleanup: Teacher Unpublish Experiment'); return; }",
         "if(!pm.collectionVariables.get('experimentId')){ postman.setNextRequest('Cleanup: Teacher Unpublish Experiment'); return; }"
       ] } }, { "listen": "test", "script": { "exec": [
         "const shouldDelete = pm.collectionVariables.get('taskId') && pm.collectionVariables.get('experimentId');",
-        "if (shouldDelete) { pm.test('删除任务 成功', () => [200,204].includes(pm.response.code)); } else { pm.test('跳过删除任务', () => true); }"
+  "if (shouldDelete) { pm.test('删除任务 成功或已不存在', () => [200,204,404].includes(pm.response.code)); pm.collectionVariables.unset('taskId'); } else { pm.test('跳过删除任务', () => true); }"
       ] } } ] },
     { "name": "Cleanup: Teacher Unpublish Experiment", "request": { "method": "PUT", "header": [ {"key":"Authorization","value":"{{teacherAuth}}"} ], "url": { "raw": "{{baseUrl}}/api/experiments/{{experimentId}}/unpublish", "host": ["{{baseUrl}}"], "path": ["api","experiments","{{experimentId}}","unpublish"] } },
       "event": [ { "listen": "prerequest", "script": { "exec": [
@@ -180,13 +181,13 @@
       ] } }, { "listen": "test", "script": { "exec": [
         "pm.test('HTTP 200/204', () => [200,204].includes(pm.response.code));"
       ] } } ] },
-    { "name": "Cleanup: Teacher Delete Experiment", "request": { "method": "DELETE", "header": [ {"key":"Authorization","value":"{{teacherAuth}}"} ], "url": { "raw": "{{baseUrl}}/api/experiments/{{experimentId}}", "host": ["{{baseUrl}}"], "path": ["api","experiments","{{experimentId}}"] } },
+  { "name": "Cleanup: Teacher Delete Experiment", "request": { "method": "DELETE", "header": [ {"key":"Authorization","value":"{{teacherAuth}}"} ], "url": { "raw": "{{baseUrl}}/api/experiments/{{experimentId}}", "host": ["{{baseUrl}}"], "path": ["api","experiments","{{experimentId}}"] } },
       "event": [ { "listen": "prerequest", "script": { "exec": [
         "if(pm.collectionVariables.get('taskId')){ postman.setNextRequest('Cleanup: Teacher Delete Task'); return; }",
         "if(!pm.collectionVariables.get('experimentId')){ postman.setNextRequest('Capture announcementId if missing (Admin)'); return; }"
       ] } }, { "listen": "test", "script": { "exec": [
         "const hasExp = pm.collectionVariables.get('experimentId');",
-        "if (hasExp) { pm.test('删除实验 成功', () => [200,204].includes(pm.response.code)); } else { pm.test('跳过删除实验', () => true); }"
+  "if (hasExp) { pm.test('删除实验 成功或已不存在', () => [200,204,404].includes(pm.response.code)); pm.collectionVariables.unset('experimentId'); } else { pm.test('跳过删除实验', () => true); }"
       ] } } ] },
     { "name": "Capture announcementId if missing (Admin)",
       "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{authHeader}}"} ], "url": { "raw": "{{baseUrl}}/api/announcements", "host": ["{{baseUrl}}"], "path": ["api","announcements"] } },
@@ -218,6 +219,19 @@
         "const hasId = pm.collectionVariables.get('messageId');",
         "if (hasId) { pm.test('删除消息 成功', () => [200,204].includes(pm.response.code)); } else { pm.test('跳过删除消息', () => true); }"
       ] } } ] },
+    { "name": "Cleanup: Admin Delete Comment (if any)",
+      "request": { "method": "DELETE", "header": [ {"key":"Authorization","value":"{{authHeader}}"} ],
+        "url": { "raw": "{{commentDeleteUrl}}", "host": ["{{commentDeleteUrl}}"] }
+      },
+      "event": [ { "listen": "prerequest", "script": { "exec": [
+        "const cid = pm.collectionVariables.get('commentId');",
+        "if(!cid){ pm.collectionVariables.set('commentDeleteIsNoop','1'); pm.variables.set('commentDeleteUrl', pm.collectionVariables.get('noopUrl') || 'https://httpbin.org/status/204'); return; }",
+        "pm.collectionVariables.set('commentDeleteIsNoop','');",
+        "const u = pm.variables.replaceIn('{{baseUrl}}/api/comments/{{commentId}}'); pm.variables.set('commentDeleteUrl', u);"
+      ] } }, { "listen": "test", "script": { "exec": [
+        "if(pm.collectionVariables.get('commentDeleteIsNoop')){ pm.test('跳过删除评论', () => true); } else { pm.test('HTTP 200/204', () => [200,204].includes(pm.response.code)); }"
+      ] } } ]
+    },
     { "name": "Capture discussionId if missing (Student)",
       "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ], "url": { "raw": "{{baseUrl}}/api/discussions?userId={{studentUserId}}&page=0&size=10", "host": ["{{baseUrl}}"], "path": ["api","discussions"], "query": [ {"key":"userId","value":"{{studentUserId}}"}, {"key":"page","value":"0"}, {"key":"size","value":"10"} ] } },
       "event": [ { "listen": "prerequest", "script": { "exec": [
