@@ -58,7 +58,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    image: linghuzhiyan:local
+    image: linghuzhiyan-app:latest
     container_name: linghuzhiyan
     depends_on:
       mysql:
