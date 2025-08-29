@@ -1,21 +1,19 @@
 package org.linghu.mybackend.service.impl;
 
-import org.linghu.mybackend.domain.Experiment;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.linghu.mybackend.domain.ExperimentAssignment;
 import org.linghu.mybackend.domain.User;
 import org.linghu.mybackend.dto.UserDTO;
 import org.linghu.mybackend.repository.ExperimentAssignmentRepository;
-import org.linghu.mybackend.repository.ExperimentRepository;
 import org.linghu.mybackend.repository.ExperimentTaskRepository;
 import org.linghu.mybackend.repository.UserRepository;
 import org.linghu.mybackend.service.ExperimentAssignmentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * 实验任务分配管理服务实现类
@@ -24,17 +22,14 @@ import java.util.stream.Collectors;
 public class ExperimentAssignmentServiceImpl implements ExperimentAssignmentService {
 
     private final ExperimentAssignmentRepository assignmentRepository;
-    private final ExperimentRepository experimentRepository;
     private final UserRepository userRepository;
     private final ExperimentTaskRepository experimentTaskRepository;
 
     @Autowired
     public ExperimentAssignmentServiceImpl(
             ExperimentAssignmentRepository assignmentRepository,
-            ExperimentRepository experimentRepository,
             UserRepository userRepository, ExperimentTaskRepository experimentTaskRepository) {
         this.assignmentRepository = assignmentRepository;
-        this.experimentRepository = experimentRepository;
         this.userRepository = userRepository;
         this.experimentTaskRepository = experimentTaskRepository;
     }
@@ -132,9 +127,9 @@ public class ExperimentAssignmentServiceImpl implements ExperimentAssignmentServ
     @Override
     @Transactional
     public void assignTaskToAllStudents(String taskId) {
-        // 验证实验任务是否存在
-        experimentRepository.findById(taskId)
-                .orElseThrow(() -> new RuntimeException("实验任务不存在"));
+    // 验证实验任务是否存在（校验任务本身而不是实验）
+    experimentTaskRepository.findById(taskId)
+        .orElseThrow(() -> new RuntimeException("实验任务不存在"));
 
         // 获取所有学生用户
         List<User> students = getAllStudentUsers();
@@ -153,9 +148,10 @@ public class ExperimentAssignmentServiceImpl implements ExperimentAssignmentServ
      * @return 学生用户列表
      */
     private List<User> getAllStudentUsers() {
-        // 这里需要根据实际情况实现
-        // 例如可以通过角色查询所有学生
-        return userRepository.findAll();
+        // 仅返回学生角色用户（简化：在内存中过滤）
+        return userRepository.findAll().stream()
+                .filter(this::isStudentUser)
+                .collect(Collectors.toList());
     }    @Override
     @Transactional
     public void removeTaskAssignment(String taskId, String userId) {

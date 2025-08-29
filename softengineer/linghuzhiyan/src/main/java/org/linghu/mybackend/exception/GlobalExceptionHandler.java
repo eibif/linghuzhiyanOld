@@ -1,6 +1,6 @@
 package org.linghu.mybackend.exception;
 
-import lombok.extern.slf4j.Slf4j;
+import java.util.List;
 
 import org.linghu.mybackend.constants.SystemConstants;
 import org.linghu.mybackend.dto.Result;
@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 全局异常处理器
@@ -50,6 +50,14 @@ public class GlobalExceptionHandler {
         Result<String> result = new Result<>();
         result.setCode(403);
         result.setMessage("权限不足，无法访问该资源");
+        return new ResponseEntity<>(result, HttpStatus.FORBIDDEN);
+    }
+    // 处理业务中的未授权异常，统一返回403
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<Result<String>> handleUnauthorizedException(UnauthorizedException ex) {
+        Result<String> result = new Result<>();
+        result.setCode(403);
+        result.setMessage(ex.getMessage() != null ? ex.getMessage() : "权限不足，无法访问该资源");
         return new ResponseEntity<>(result, HttpStatus.FORBIDDEN);
     }
     // /**
