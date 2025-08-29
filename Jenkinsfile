@@ -16,9 +16,9 @@ pipeline {
                     script {
                         if (isUnix()) {
                             sh 'chmod +x mvnw || echo skip'
-                            sh './mvnw clean package -DskipTests'
+                            sh './mvnw clean package'
                         } else {
-                            bat 'mvnw.cmd clean package -DskipTests'
+                            bat 'mvnw.cmd clean package'
                         }
                     }
                 }
@@ -94,9 +94,9 @@ pipeline {
                         } else {
                             bat '''
                                 echo 等待go-judge服务启动...
-                                kubectl wait --for=condition=ready pod -l app=go-judge -n linghu --timeout=300s
+                                kubectl wait --for=condition=ready pod -l app=go-judge -n linghu --timeout=30s
                                 echo 等待应用服务启动...
-                                kubectl wait --for=condition=ready pod -l app=linghuzhiyan -n linghu --timeout=300s
+                                kubectl wait --for=condition=ready pod -l app=linghuzhiyan -n linghu --timeout=30s
                                 echo 检查服务状态...
                                 kubectl get pods -n linghu
                                 kubectl get services -n linghu
