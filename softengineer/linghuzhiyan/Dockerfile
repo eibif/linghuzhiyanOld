@@ -9,7 +9,7 @@ COPY pom.xml ./
 # Optional: custom Maven settings for faster mirrors
 COPY maven-settings.xml /root/.m2/settings.xml
 RUN --mount=type=cache,target=/root/.m2 mvn \
-	-U -DskipTests \
+	-U -DskipTests -Dmaven.test.skip=true \
 	-Dorg.slf4j.simpleLogger.showDateTime=true \
 	-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=info \
 	dependency:go-offline
@@ -17,7 +17,7 @@ RUN --mount=type=cache,target=/root/.m2 mvn \
 # Copy sources and build
 COPY src ./src
 RUN --mount=type=cache,target=/root/.m2 mvn \
-	-DskipTests \
+	-Dmaven.test.skip=true \
 	-Dorg.slf4j.simpleLogger.showDateTime=true \
 	-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=info \
 	clean package

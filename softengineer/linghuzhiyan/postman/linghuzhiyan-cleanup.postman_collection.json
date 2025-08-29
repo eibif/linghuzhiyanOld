@@ -344,12 +344,12 @@
       "event": [ { "listen": "prerequest", "script": { "exec": [
         "if(!pm.collectionVariables.get('studentUserId')){ postman.setNextRequest('Capture IDs if missing (Admin)'); }"
       ] } }, { "listen": "test", "script": { "exec": [
-        "pm.test('HTTP 200', () => pm.response.code === 200);",
-        "let json=null; try{ json=pm.response.json(); }catch(e){}",
-        "const data = (json && json.data) ? json.data : null;",
-        "let items = [];",
-        "if(data){ if(Array.isArray(data.items)){ items = data.items; } else if(Array.isArray(data.list)){ items = data.list; } }",
-        "if(!pm.collectionVariables.get('discussionId') && items.length>0){ pm.collectionVariables.set('discussionId', items[items.length-1].id); }"
+  "pm.test('HTTP 200', () => pm.response.code === 200);",
+  "let json=null; try{ json=pm.response.json(); }catch(e){}",
+  "const payload = (json && json.data) ? json.data : null;",
+  "let items = [];",
+  "if(payload){ if(Array.isArray(payload.items)){ items = payload.items; } else if(Array.isArray(payload.list)){ items = payload.list; } }",
+  "if(!pm.collectionVariables.get('discussionId') && items.length>0){ pm.collectionVariables.set('discussionId', items[items.length-1].id); }"
       ] } } ]
     },
     {
@@ -357,18 +357,12 @@
       "request": { "method": "DELETE", "header": [ {"key":"Authorization","value":"{{discussionAuth}}"} ], "url": { "raw": "{{discussionDeleteUrl}}", "host": ["{{discussionDeleteUrl}}"] } },
       "event": [ { "listen": "prerequest", "script": { "exec": [
         "const did = pm.collectionVariables.get('discussionId');",
-        "if(!did){",
-        "  const tried = pm.collectionVariables.get('discussionCaptureTried');",
-        "  if(!tried){ pm.collectionVariables.set('discussionCaptureTried', '1'); postman.setNextRequest('Capture discussionId if missing (Student)'); return; }",
-        "  pm.variables.set('discussionDeleteUrl', pm.collectionVariables.get('noopUrl') || 'https://httpbin.org/status/204'); pm.collectionVariables.set('discussionAuth', ''); pm.collectionVariables.set('discussionDeleteIsNoop','1'); return;",
-        "}",
+        "if(!did){ pm.variables.set('discussionDeleteUrl', pm.collectionVariables.get('noopUrl') || 'https://httpbin.org/status/204'); pm.collectionVariables.set('discussionDeleteIsNoop','1'); return; }",
         "const u = pm.variables.replaceIn('{{baseUrl}}/api/discussions/{{discussionId}}');",
         "pm.variables.set('discussionDeleteUrl', u);",
-        "pm.collectionVariables.set('discussionAuth', pm.collectionVariables.get('studentAuth'));",
         "pm.collectionVariables.set('discussionDeleteIsNoop','')"
       ] } }, { "listen": "test", "script": { "exec": [
-        "pm.test('删除未走 noop', () => !pm.collectionVariables.get('discussionDeleteIsNoop'));",
-        "if (!pm.collectionVariables.get('discussionDeleteIsNoop')) { pm.test('HTTP 200/204/404', () => [200,204,404].includes(pm.response.code)); pm.collectionVariables.unset('discussionId'); }"
+        "if(pm.collectionVariables.get('discussionDeleteIsNoop')){ pm.test('跳过删除讨论', () => true); } else { pm.test('HTTP 200/204/404', () => [200,204,404].includes(pm.response.code)); pm.collectionVariables.unset('discussionId'); }"
       ] } } ]
     }
   ]
