@@ -43,8 +43,8 @@ public class ExperimentTaskServiceImpl implements ExperimentTaskService {
         }
 
         // 获取当前实验的最大顺序号
-        Integer maxOrder = experimentTaskRepository.findMaxOrderNumByExperimentId(experimentId);
-        int nextOrder = (maxOrder != null) ? maxOrder + 1 : 1;
+        int maxOrder = experimentTaskRepository.findMaxOrderNumByExperimentId(experimentId);
+        int nextOrder = maxOrder + 1;
 
         // 处理问题ID - 将Object类型的question字段转换为JSON字符串
         String questionIdsJson = null;

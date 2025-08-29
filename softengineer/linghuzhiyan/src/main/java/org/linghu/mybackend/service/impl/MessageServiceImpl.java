@@ -119,6 +119,72 @@ public class MessageServiceImpl implements MessageService {
         return result;
     }
 
+    @Override
+    public void sendSystemNotification(String title, String content, List<String> receiverIds) {
+        for (String receiverId : receiverIds) {
+            try {
+                Message message = Message.builder()
+                        .title(title)
+                        .content(content)
+                        .sender("SYSTEM") // 系统发送者
+                        .receiver(receiverId)
+                        .senderRole("SYSTEM")
+                        .status("未读")
+                        .createdAt(LocalDateTime.now())
+                        .updatedAt(LocalDateTime.now())
+                        .build();
+
+                messageRepository.save(message);
+            } catch (Exception e) {
+                // 单个用户发送失败不影响其他用户
+                System.err.println("发送系统通知失败: receiverId=" + receiverId + ", error=" + e.getMessage());
+            }
+        }
+    }
+
+    @Override
+    public void sendExperimentNotification(String title, String content, String experimentId, List<String> receiverIds) {
+        for (String receiverId : receiverIds) {
+            try {
+                Message message = Message.builder()
+                        .title(title)
+                        .content(content)
+                        .sender("SYSTEM")
+                        .receiver(receiverId)
+                        .senderRole("SYSTEM")
+                        .status("未读")
+                        .createdAt(LocalDateTime.now())
+                        .updatedAt(LocalDateTime.now())
+                        .build();
+
+                messageRepository.save(message);
+            } catch (Exception e) {
+                System.err.println("发送实验通知失败: receiverId=" + receiverId + ", experimentId=" + experimentId + ", error=" + e.getMessage());
+            }
+        }
+    }
+
+    @Override
+    public void sendGradeNotification(String title, String content, String experimentId, String receiverId) {
+        try {
+            Message message = Message.builder()
+                    .title(title)
+                    .content(content)
+                    .sender("SYSTEM")
+                    .receiver(receiverId)
+                    .senderRole("SYSTEM")
+                    .status("未读")
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .build();
+
+            messageRepository.save(message);
+        } catch (Exception e) {
+            System.err.println("发送成绩通知失败: receiverId=" + receiverId + ", experimentId=" + experimentId + ", error=" + e.getMessage());
+            throw new RuntimeException("发送成绩通知失败: " + e.getMessage(), e);
+        }
+    }
+
     private MessageDTO toDTO(Message message) {
         return MessageDTO.builder()
                 .id(message.getId())
@@ -127,6 +193,7 @@ public class MessageServiceImpl implements MessageService {
                 .sender(message.getSender())
                 .receiver(message.getReceiver())
                 .status(message.getStatus())
+                .senderRole(message.getSenderRole())
                 .createdAt(message.getCreatedAt() == null ? null : message.getCreatedAt().toString())
                 .updatedAt(message.getUpdatedAt() == null ? null : message.getUpdatedAt().toString())
                 .build();
