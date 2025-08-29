@@ -61,6 +61,7 @@ pipeline {
                                 sh 'kubectl apply -f mysql.yaml'
                                 sh 'kubectl apply -f mongo.yaml'
                                 sh 'kubectl apply -f minio.yaml'
+                                sh 'kubectl apply -f go-judge.yaml'
                                 sh 'kubectl apply -f app.yaml'
                             } else {
                                 bat 'kubectl apply -f namespace.yaml'
@@ -68,8 +69,38 @@ pipeline {
                                 bat 'kubectl apply -f mysql.yaml'
                                 bat 'kubectl apply -f mongo.yaml'
                                 bat 'kubectl apply -f minio.yaml'
+                                bat 'kubectl apply -f go-judge.yaml'
                                 bat 'kubectl apply -f app.yaml'
                             }
+                        }
+                    }
+                }
+            }
+        }
+        stage('Health Check') {
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                    script {
+                        if (isUnix()) {
+                            sh '''
+                                echo "等待go-judge服务启动..."
+                                kubectl wait --for=condition=ready pod -l app=go-judge -n linghu --timeout=300s
+                                echo "等待应用服务启动..."
+                                kubectl wait --for=condition=ready pod -l app=linghuzhiyan -n linghu --timeout=300s
+                                echo "检查服务状态..."
+                                kubectl get pods -n linghu
+                                kubectl get services -n linghu
+                            '''
+                        } else {
+                            bat '''
+                                echo 等待go-judge服务启动...
+                                kubectl wait --for=condition=ready pod -l app=go-judge -n linghu --timeout=300s
+                                echo 等待应用服务启动...
+                                kubectl wait --for=condition=ready pod -l app=linghuzhiyan -n linghu --timeout=300s
+                                echo 检查服务状态...
+                                kubectl get pods -n linghu
+                                kubectl get services -n linghu
+                            '''
                         }
                     }
                 }

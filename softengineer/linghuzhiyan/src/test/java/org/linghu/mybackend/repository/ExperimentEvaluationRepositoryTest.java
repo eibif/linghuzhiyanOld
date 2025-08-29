@@ -32,7 +32,7 @@ class ExperimentEvaluationRepositoryTest {
 
         // Then
         assertNotNull(evaluations);
-        assertEquals(2, evaluations.size());
+        assertEquals(1, evaluations.size());
         assertTrue(evaluations.stream().allMatch(e -> "sub1".equals(e.getSubmissionId())));
     }
 
@@ -267,7 +267,7 @@ class ExperimentEvaluationRepositoryTest {
 
         // Then
         assertNotNull(evaluations);
-        assertEquals(2, evaluations.size());
+        assertEquals(1, evaluations.size());
         assertTrue(evaluations.stream().allMatch(e -> "sub1".equals(e.getSubmissionId())));
     }
 

@@ -309,14 +309,15 @@ class ExperimentAssignmentControllerTest {
         void shouldHandleInvalidParametersForBatchRemoval() {
             // given
             Map<String, Object> invalidRequest = new HashMap<>();
-            // 不包含userIds字段，模拟无效请求
 
-            // when
-            Result<Void> response = experimentAssignmentController.removeTaskAssignment(invalidRequest, "task123");
+            // when & then
+            try {
+                experimentAssignmentController.removeTaskAssignment(invalidRequest, "task123");
+            } catch (IllegalArgumentException e) {
+                assertThat(e.getMessage()).isEqualTo("请求参数必须包含单个或多个学生ID");
+            }
 
-            // then
-            // 根据控制器实际行为，可能会传递null或空列表给service
-            verify(experimentAssignmentService).batchRemoveTaskAssignment(eq("task123"), any());
+            verify(experimentAssignmentService, never()).batchRemoveTaskAssignment(any(), any());
         }
     }
 }

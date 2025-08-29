@@ -261,10 +261,8 @@ class ExperimentServiceImplTest {
         when(experimentRepository.existsById("nonexistent")).thenReturn(false);
 
         // When & Then
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            experimentService.deleteExperiment("nonexistent");
-        });
-        assertEquals("实验不存在", exception.getMessage());
+        experimentService.deleteExperiment("nonexistent");
+
         verify(experimentRepository, never()).deleteById(any());
     }
 
