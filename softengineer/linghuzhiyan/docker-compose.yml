@@ -89,7 +89,7 @@ services:
       # 可选：持久化文件存储（如果需要）
       - judge_data:/tmp/judge
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://127.0.0.1:5050/version"]
+      test: ["CMD", "sh", "-c", "pidof go-judge || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 5
