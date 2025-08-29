@@ -29,6 +29,14 @@ spec:
                   key: jwt-secret
             - name: TZ
               value: Asia/Shanghai
+            - name: JUDGE_SERVICE_URL
+              value: http://go-judge:5050
+            - name: JUDGE_SERVICE_GRPC_URL
+              value: go-judge:5051
+            - name: JUDGE_SERVICE_TIMEOUT
+              value: "30"
+            - name: JUDGE_SERVICE_MAX_RETRIES
+              value: "3"
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
