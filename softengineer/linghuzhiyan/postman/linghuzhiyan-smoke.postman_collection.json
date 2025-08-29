@@ -29,7 +29,8 @@
     { "key": "announcementId", "value": "", "type": "string" },
     { "key": "messageId", "value": "", "type": "string" },
   { "key": "discussionId", "value": "", "type": "string" },
-  { "key": "commentId", "value": "", "type": "string" }
+  { "key": "commentId", "value": "", "type": "string" },
+  { "key": "replyCommentId", "value": "", "type": "string" }
   ],
   "item": [
     {
@@ -335,6 +336,22 @@
       ] } } ]
   },
     {
+      "name": "16.4 - Student1 Get Discussions (pending visible to self)",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/discussions?experimentId={{experimentId}}&page=0&size=10", "host":["{{baseUrl}}"], "path":["api","discussions"], "query":[{"key":"experimentId","value":"{{experimentId}}"},{"key":"page","value":"0"},{"key":"size","value":"10"}] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){}",
+        "pm.test('业务码 200', () => json && json.code === 200);",
+        "const data = json && json.data;",
+        "let items = []; if(data){ if(Array.isArray(data.items)) items=data.items; else if(Array.isArray(data.list)) items=data.list; }",
+        "const did = pm.collectionVariables.get('discussionId');",
+        "const found = items.some(it => it && (it.id===did));",
+        "pm.test('学生1能看到自己未审核讨论', () => found);"
+      ] } } ]
+    },
+    {
       "name": "16.5 - Student2 Get Discussions (pending not visible)",
       "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{student2Auth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/discussions?experimentId={{experimentId}}&page=0&size=10", "host":["{{baseUrl}}"], "path":["api","discussions"], "query":[{"key":"experimentId","value":"{{experimentId}}"},{"key":"page","value":"0"},{"key":"size","value":"10"}] }
@@ -404,6 +421,77 @@
         "const cid = pm.collectionVariables.get('commentId');",
         "const found = items.some(it => it && (it.id===cid));",
         "pm.test('学生1能看到学生2的回复', () => found);"
+      ] } } ]
+    },
+    {
+      "name": "16.10 - Student1 Like Student2 Reply",
+      "request": { "method": "POST", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/comments/{{commentId}}/like", "host":["{{baseUrl}}"], "path":["api","comments","{{commentId}}","like"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);"
+      ] } } ]
+    },
+    {
+      "name": "16.11 - Student1 Unlike Student2 Reply",
+      "request": { "method": "POST", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/comments/{{commentId}}/like", "host":["{{baseUrl}}"], "path":["api","comments","{{commentId}}","like"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);"
+      ] } } ]
+    },
+    {
+      "name": "16.12 - Student1 Reply to Student2 Reply",
+      "request": { "method": "POST", "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/discussions/{{discussionId}}/comments", "host":["{{baseUrl}}"], "path":["api","discussions","{{discussionId}}","comments"] },
+        "body": { "mode":"raw", "raw": "{\n  \"content\": \"学生1对学生2回复的回复\",\n  \"parentId\": \"{{commentId}}\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "const json = pm.response.json(); pm.test('HTTP 200', () => pm.response.code===200); pm.test('业务码 200', () => json && json.code===200);",
+        "if(json && json.data && json.data.id){ pm.collectionVariables.set('replyCommentId', json.data.id); }",
+        "pm.test('拿到 replyCommentId', () => !!pm.collectionVariables.get('replyCommentId'));"
+      ] } } ]
+    },
+    {
+      "name": "16.13 - Student2 Get Replies of Own Comment",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{student2Auth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/comments/{{commentId}}/replies?page=0&size=10", "host":["{{baseUrl}}"], "path":["api","comments","{{commentId}}","replies"], "query":[{"key":"page","value":"0"},{"key":"size","value":"10"}] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200); let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);",
+        "const data = json && json.data; let items = []; if(data){ if(Array.isArray(data.items)) items=data.items; else if(Array.isArray(data.list)) items=data.list; }",
+        "const rid = pm.collectionVariables.get('replyCommentId'); const found = items.some(it => it && (it.id===rid)); pm.test('学生2能看到学生1的回复', () => found);"
+      ] } } ]
+    },
+    {
+      "name": "16.14 - Student2 Report Student1 Reply",
+      "request": { "method": "POST", "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{student2Auth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/comments/{{replyCommentId}}/report", "host":["{{baseUrl}}"], "path":["api","comments","{{replyCommentId}}","report"] },
+        "body": { "mode":"raw", "raw": "{\n  \"reason\": \"INAPPROPRIATE\",\n  \"details\": \"测试举报\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200); let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);"
+      ] } } ]
+    },
+    {
+      "name": "16.15 - Student2 Try Delete Student1 Reply (should fail 403)",
+      "request": { "method": "DELETE", "header": [ {"key":"Authorization","value":"{{student2Auth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/comments/{{replyCommentId}}", "host":["{{baseUrl}}"], "path":["api","comments","{{replyCommentId}}"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 403', () => pm.response.code===403);"
+      ] } } ]
+    },
+    {
+      "name": "16.15 - Student1 Delete Own Reply",
+      "request": { "method": "DELETE", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/comments/{{replyCommentId}}", "host":["{{baseUrl}}"], "path":["api","comments","{{replyCommentId}}"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200/204', () => [200,204].includes(pm.response.code));"
       ] } } ]
     }
   ]
