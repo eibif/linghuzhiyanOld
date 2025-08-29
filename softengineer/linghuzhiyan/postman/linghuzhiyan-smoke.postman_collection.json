@@ -341,11 +341,11 @@
         "url": { "raw": "{{baseUrl}}/api/discussions?experimentId={{experimentId}}&page=0&size=10", "host":["{{baseUrl}}"], "path":["api","discussions"], "query":[{"key":"experimentId","value":"{{experimentId}}"},{"key":"page","value":"0"},{"key":"size","value":"10"}] }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-        "pm.test('HTTP 200', () => pm.response.code===200);",
-        "let json=null; try{ json=pm.response.json(); }catch(e){}",
-        "pm.test('业务码 200', () => json && json.code === 200);",
-        "const data = json && json.data;",
-        "let items = []; if(data){ if(Array.isArray(data.items)) items=data.items; else if(Array.isArray(data.list)) items=data.list; }",
+  "pm.test('HTTP 200', () => pm.response.code===200);",
+  "let json=null; try{ json=pm.response.json(); }catch(e){}",
+  "pm.test('业务码 200', () => json && json.code === 200);",
+  "const payload = json && json.data;",
+  "let items = []; if(payload){ if(Array.isArray(payload.items)) items=payload.items; else if(Array.isArray(payload.list)) items=payload.list; }",
         "const did = pm.collectionVariables.get('discussionId');",
         "const found = items.some(it => it && (it.id===did));",
         "pm.test('学生1能看到自己未审核讨论', () => found);"
@@ -357,11 +357,11 @@
         "url": { "raw": "{{baseUrl}}/api/discussions?experimentId={{experimentId}}&page=0&size=10", "host":["{{baseUrl}}"], "path":["api","discussions"], "query":[{"key":"experimentId","value":"{{experimentId}}"},{"key":"page","value":"0"},{"key":"size","value":"10"}] }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-        "pm.test('HTTP 200', () => pm.response.code===200);",
-        "let json=null; try{ json=pm.response.json(); }catch(e){}",
-        "pm.test('业务码 200', () => json && json.code === 200);",
-        "const data = json && json.data;",
-        "let items = []; if(data){ if(Array.isArray(data.items)) items=data.items; else if(Array.isArray(data.list)) items=data.list; }",
+  "pm.test('HTTP 200', () => pm.response.code===200);",
+  "let json=null; try{ json=pm.response.json(); }catch(e){}",
+  "pm.test('业务码 200', () => json && json.code === 200);",
+  "const payload = json && json.data;",
+  "let items = []; if(payload){ if(Array.isArray(payload.items)) items=payload.items; else if(Array.isArray(payload.list)) items=payload.list; }",
         "const did = pm.collectionVariables.get('discussionId');",
         "const found = items.some(it => it && (it.id===did));",
         "pm.test('学生2看不到未审核讨论', () => !found);"
@@ -385,10 +385,10 @@
         "url": { "raw": "{{baseUrl}}/api/discussions?experimentId={{experimentId}}&page=0&size=10", "host":["{{baseUrl}}"], "path":["api","discussions"], "query":[{"key":"experimentId","value":"{{experimentId}}"},{"key":"page","value":"0"},{"key":"size","value":"10"}] }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-        "pm.test('HTTP 200', () => pm.response.code===200);",
-        "let json=null; try{ json=pm.response.json(); }catch(e){}",
-        "pm.test('业务码 200', () => json && json.code === 200);",
-        "const data = json && json.data; let items = []; if(data){ if(Array.isArray(data.items)) items=data.items; else if(Array.isArray(data.list)) items=data.list; }",
+  "pm.test('HTTP 200', () => pm.response.code===200);",
+  "let json=null; try{ json=pm.response.json(); }catch(e){}",
+  "pm.test('业务码 200', () => json && json.code === 200);",
+  "const payload = json && json.data; let items = []; if(payload){ if(Array.isArray(payload.items)) items=payload.items; else if(Array.isArray(payload.list)) items=payload.list; }",
         "const did = pm.collectionVariables.get('discussionId');",
         "const found = items.some(it => it && (it.id===did));",
         "pm.test('学生2能看到已通过讨论', () => found);"
@@ -414,10 +414,10 @@
         "url": { "raw": "{{baseUrl}}/api/discussions/{{discussionId}}/comments?rootOnly=false&page=0&size=10", "host":["{{baseUrl}}"], "path":["api","discussions","{{discussionId}}","comments"], "query":[{"key":"rootOnly","value":"false"},{"key":"page","value":"0"},{"key":"size","value":"10"}] }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-        "pm.test('HTTP 200', () => pm.response.code===200);",
-        "let json=null; try{ json=pm.response.json(); }catch(e){}",
-        "pm.test('业务码 200', () => json && json.code===200);",
-        "const data = json && json.data; let items = []; if(data){ if(Array.isArray(data.items)) items=data.items; else if(Array.isArray(data.list)) items=data.list; }",
+  "pm.test('HTTP 200', () => pm.response.code===200);",
+  "let json=null; try{ json=pm.response.json(); }catch(e){}",
+  "pm.test('业务码 200', () => json && json.code===200);",
+  "const payload = json && json.data; let items = []; if(payload){ if(Array.isArray(payload.items)) items=payload.items; else if(Array.isArray(payload.list)) items=payload.list; }",
         "const cid = pm.collectionVariables.get('commentId');",
         "const found = items.some(it => it && (it.id===cid));",
         "pm.test('学生1能看到学生2的回复', () => found);"
@@ -461,9 +461,9 @@
         "url": { "raw": "{{baseUrl}}/api/comments/{{commentId}}/replies?page=0&size=10", "host":["{{baseUrl}}"], "path":["api","comments","{{commentId}}","replies"], "query":[{"key":"page","value":"0"},{"key":"size","value":"10"}] }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-        "pm.test('HTTP 200', () => pm.response.code===200); let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);",
-        "const data = json && json.data; let items = []; if(data){ if(Array.isArray(data.items)) items=data.items; else if(Array.isArray(data.list)) items=data.list; }",
-        "const rid = pm.collectionVariables.get('replyCommentId'); const found = items.some(it => it && (it.id===rid)); pm.test('学生2能看到学生1的回复', () => found);"
+  "pm.test('HTTP 200', () => pm.response.code===200); let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);",
+  "const payload = json && json.data; let items = []; if(payload){ if(Array.isArray(payload.items)) items=payload.items; else if(Array.isArray(payload.list)) items=payload.list; }",
+  "const rid = pm.collectionVariables.get('replyCommentId'); const found = items.some(it => it && (it.id===rid)); pm.test('学生2能看到学生1的回复', () => found);"
       ] } } ]
     },
     {
