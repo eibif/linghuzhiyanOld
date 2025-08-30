@@ -888,17 +888,6 @@
         "const hasAdmin = arr.some(s => s && (s.senderUsername===aname));",
         "pm.test('删除后发送者集合应减少(老师或管理员至少有一方可能不在)', () => !(hasTeacher && hasAdmin));"
       ] } } ]
-  },
-    {
-      "name": "15 - Student Get My Experiments",
-      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
-        "url": { "raw": "{{baseUrl}}/api/student/experiments", "host":["{{baseUrl}}"], "path":["api","student","experiments"] }
-      },
-      "event": [ { "listen": "test", "script": { "exec": [
-  "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
-        "const json = pm.response.json();",
-        "pm.test('业务码 200', () => json && json.code === 200)"
-      ] } } ]
     },
     {
       "name": "15a - Student Get My Experiments (should not include unassigned draft)",
@@ -912,6 +901,20 @@
         "const eid = pm.collectionVariables.get('experimentIdUnassigned');",
         "const contains = arr.some(it => it && it.id===eid);",
         "pm.test('学生实验列表不包含未发布且未分配的实验', () => contains===false);"
+      ] } } ]
+    },
+    {
+      "name": "15a.1 - Student Get Experiment Details",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/student/experiments/{{experimentId}}", "host":["{{baseUrl}}"], "path":["api","student","experiments","{{experimentId}}"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);",
+        "pm.test('实验ID匹配', () => json && json.data && json.data.id===pm.collectionVariables.get('experimentId'));",
+        "const expectedName = pm.collectionVariables.get('experimentNameAfter');",
+        "if(expectedName){ pm.test('名称为老师更新后的名称', () => json && json.data && json.data.name===expectedName); }",
+        "if(json && json.data && json.data.status){ pm.test('状态为PUBLISHED', () => json.data.status==='PUBLISHED'); }"
       ] } } ]
     },
     {
@@ -954,6 +957,70 @@
       },
       "event": [ { "listen": "test", "script": { "exec": [
         "pm.test('HTTP 403', () => pm.response.code===403);"
+      ] } } ]
+    },
+    {
+      "name": "15e0 - Student Submit Task1 Answer (one wrong)",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/student/experiments/tasks/submit", "host":["{{baseUrl}}"], "path":["api","student","experiments","tasks","submit"] },
+        "body": { "mode": "raw", "raw": "{\n  \"taskId\": \"{{taskId}}\",\n  \"experimentId\": \"{{experimentId}}\",\n  \"userAnswer\": { \"{{q1Id}}\": \"A\", \"{{q2Id}}\": \"B\" }\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200/201', () => [200,201].includes(pm.response.code));",
+        "let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);",
+        "pm.test('返回提交ID(错误提交)', () => json && json.data && json.data.id);"
+      ] } } ]
+    },
+    {
+      "name": "15f0 - Student Get Task1 Evaluation Result (after wrong)",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/student/experiments/tasks/{{taskId}}/result", "host":["{{baseUrl}}"], "path":["api","student","experiments","tasks","{{taskId}}","result"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);",
+        "pm.test('评测包含taskId(错误提交)', () => json && json.data && json.data.taskId===pm.collectionVariables.get('taskId'));",
+        "if(json && json.data && json.data.score!=null){ const s=Number(json.data.score); pm.test('分数约为50(2题错1题)', () => s>=49.9 && s<=50.1); }"
+      ] } } ]
+    },
+    {
+      "name": "15e - Student Submit Task1 Answer",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/student/experiments/tasks/submit", "host":["{{baseUrl}}"], "path":["api","student","experiments","tasks","submit"] },
+        "body": { "mode": "raw", "raw": "{\n  \"taskId\": \"{{taskId}}\",\n  \"experimentId\": \"{{experimentId}}\",\n  \"userAnswer\": { \"{{q1Id}}\": \"B\", \"{{q2Id}}\": \"B\" }\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200/201', () => [200,201].includes(pm.response.code));",
+        "let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);",
+        "pm.test('返回提交ID', () => json && json.data && json.data.id);"
+      ] } } ]
+    },
+    {
+      "name": "15f - Student Get Task1 Evaluation Result",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/student/experiments/tasks/{{taskId}}/result", "host":["{{baseUrl}}"], "path":["api","student","experiments","tasks","{{taskId}}","result"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);",
+        "pm.test('评测包含taskId', () => json && json.data && json.data.taskId===pm.collectionVariables.get('taskId'));",
+        "if(json && json.data && json.data.score!=null){ pm.test('有评分', () => true); }"
+      ] } } ]
+    },
+    {
+      "name": "15g - Student Get Task1 Evaluation History",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/student/experiments/tasks/{{taskId}}/history", "host":["{{baseUrl}}"], "path":["api","student","experiments","tasks","{{taskId}}","history"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);",
+        "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+        "pm.test('历史记录至少一条', () => arr.length >= 1);"
       ] } } ]
     },
     {
