@@ -382,6 +382,35 @@
       ] } } ]
     },
     {
+      "name": "10.1 - Teacher Update Task (expect success)",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/experiments/tasks/{{experimentId}}/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["api","experiments","tasks","{{experimentId}}","{{taskId}}"] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"任务一-已更新\",\n  \"description\": \"更新后的描述\",\n  \"taskType\": \"OTHER\",\n  \"question\": [\"2+2=?\", \"4\"],\n  \"required\": true\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "pm.test('返回同一任务ID', () => json && json.data && json.data.id===pm.collectionVariables.get('taskId'));",
+        "if(json && json.data && json.data.title){ pm.collectionVariables.set('taskTitleAfter', json.data.title); }",
+        "pm.test('标题包含已更新', () => (pm.collectionVariables.get('taskTitleAfter')||'').includes('已更新'));"
+      ] } } ]
+    },
+    {
+      "name": "10.2 - Admin(Teacher role) Update Teacher's Task (should fail 403)",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{adminTeacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/experiments/tasks/{{experimentId}}/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["api","experiments","tasks","{{experimentId}}","{{taskId}}"] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"管理员(老师身份)尝试修改任务-应禁止\",\n  \"description\": \"非创建者不应允许编辑\",\n  \"taskType\": \"OTHER\",\n  \"question\": [\"1+1=?\", \"2\"],\n  \"required\": true\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 403', () => pm.response.code===403);"
+      ] } } ]
+    },
+    {
       "name": "10b - Teacher Add Task 2",
       "request": {
         "method": "POST",
