@@ -38,6 +38,10 @@
   { "key": "discussionId", "value": "", "type": "string" },
   { "key": "commentId", "value": "", "type": "string" },
   { "key": "replyCommentId", "value": "", "type": "string" }
+  , { "key": "q1Id", "value": "", "type": "string" }
+  , { "key": "q2Id", "value": "", "type": "string" }
+  , { "key": "q3Id", "value": "", "type": "string" }
+  , { "key": "uniqueToken", "value": "UNIQ-{{runId}}-Q", "type": "string" }
   ],
   "item": [
     {
@@ -58,7 +62,8 @@
         "pm.test('业务码 200', () => json && json.code === 200);",
         "pm.test('返回 token', () => json && json.data && json.data.token);",
   "if (json && json.data) { pm.collectionVariables.set('authHeader', `${json.data.tokenType} ${json.data.token}`); }",
-  "if (!pm.collectionVariables.get('runId')) { pm.collectionVariables.set('runId', String(Date.now())); }"
+  "if (!pm.collectionVariables.get('runId')) { pm.collectionVariables.set('runId', String(Date.now())); }",
+  "pm.collectionVariables.set('uniqueToken', `UNIQ-${pm.collectionVariables.get('runId')}-Q`);"
       ] } } ]
     },
     {
@@ -411,6 +416,107 @@
       ] } } ]
     },
     {
+      "name": "10.3 - Teacher Create Question 1",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/questions", "host": ["{{baseUrl}}"], "path": ["api","questions"] },
+        "body": { "mode": "raw", "raw": "{\n  \"questionType\": \"SINGLE_CHOICE\",\n  \"content\": \"{{uniqueToken}}-1: 2+2=?\",\n  \"options\": [\"A.1\", \"B.4\", \"C.3\"],\n  \"answer\": \"B\",\n  \"explanation\": \"加法题\",\n  \"tags\": \"math,auto\",\n  \"score\": 5\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "if(json && json.data && json.data.id){ pm.collectionVariables.set('q1Id', json.data.id); }",
+        "pm.test('记录 q1Id', () => !!pm.collectionVariables.get('q1Id'));"
+      ] } } ]
+    },
+    {
+      "name": "10.31 - Teacher Create Question 2",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/questions", "host": ["{{baseUrl}}"], "path": ["api","questions"] },
+        "body": { "mode": "raw", "raw": "{\n  \"questionType\": \"SINGLE_CHOICE\",\n  \"content\": \"{{uniqueToken}}-2: 3+5=?\",\n  \"options\": [\"A.7\", \"B.8\", \"C.9\"],\n  \"answer\": \"B\",\n  \"explanation\": \"加法题\",\n  \"tags\": \"math,auto\",\n  \"score\": 5\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "if(json && json.data && json.data.id){ pm.collectionVariables.set('q2Id', json.data.id); }",
+        "pm.test('记录 q2Id', () => !!pm.collectionVariables.get('q2Id'));"
+      ] } } ]
+    },
+    {
+      "name": "10.32 - Teacher Create Question 3",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/questions", "host": ["{{baseUrl}}"], "path": ["api","questions"] },
+        "body": { "mode": "raw", "raw": "{\n  \"questionType\": \"QA\",\n  \"content\": \"{{uniqueToken}}-3: 简述栈与队列的区别\",\n  \"options\": null,\n  \"answer\": \"先进后出 vs 先进先出\",\n  \"explanation\": \"基础数据结构\",\n  \"tags\": \"ds,auto\",\n  \"score\": 10\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "if(json && json.data && json.data.id){ pm.collectionVariables.set('q3Id', json.data.id); }",
+        "pm.test('记录 q3Id', () => !!pm.collectionVariables.get('q3Id'));"
+      ] } } ]
+    },
+    {
+      "name": "10.35 - Teacher Update Task Questions (bind q1/q2/q3)",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/experiments/tasks/{{experimentId}}/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["api","experiments","tasks","{{experimentId}}","{{taskId}}"] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"任务一-题目绑定\",\n  \"description\": \"绑定三道题目\",\n  \"taskType\": \"OTHER\",\n  \"question\": [\"{{q1Id}}\", \"{{q2Id}}\", \"{{q3Id}}\"],\n  \"required\": true\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json(); pm.test('业务码 200', () => json && json.code===200);",
+        "pm.test('返回同一任务ID', () => json && json.data && json.data.id===pm.collectionVariables.get('taskId'));"
+      ] } } ]
+    },
+    {
+      "name": "10.33 - Teacher Update Question 2",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/questions/{{q2Id}}", "host": ["{{baseUrl}}"], "path": ["api","questions","{{q2Id}}"] },
+        "body": { "mode": "raw", "raw": "{\n  \"questionType\": \"SINGLE_CHOICE\",\n  \"content\": \"{{uniqueToken}}-2: 3+5=? (已更新)\",\n  \"options\": [\"A.7\", \"B.8\", \"C.9\"],\n  \"answer\": \"B\",\n  \"explanation\": \"更新解析\",\n  \"tags\": \"math,auto,edited\",\n  \"score\": 5\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json(); pm.test('业务码 200', () => json && json.code===200);",
+        "pm.test('题目2已更新', () => json && json.data && typeof json.data.content==='string' && json.data.content.includes('已更新'));"
+      ] } } ]
+    },
+    {
+      "name": "10.331 - Admin(Teacher role) Update Teacher's Question 2 (should fail 403)",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{adminTeacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/questions/{{q2Id}}", "host": ["{{baseUrl}}"], "path": ["api","questions","{{q2Id}}"] },
+        "body": { "mode": "raw", "raw": "{\n  \"questionType\": \"SINGLE_CHOICE\",\n  \"content\": \"管理员(老师身份)尝试编辑-应禁止\",\n  \"options\": [\"A.7\", \"B.8\", \"C.9\"],\n  \"answer\": \"B\",\n  \"explanation\": \"无\",\n  \"tags\": \"deny,test\",\n  \"score\": 5\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 403', () => pm.response.code===403);"
+      ] } } ]
+    },
+    {
+      "name": "10.34 - Teacher Delete Question 3",
+      "request": {
+        "method": "DELETE",
+        "header": [ { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/questions/{{q3Id}}", "host": ["{{baseUrl}}"], "path": ["api","questions","{{q3Id}}"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){};",
+        "pm.test('业务码 200', () => json && json.code===200);"
+      ] } } ]
+    },
+    {
       "name": "10b - Teacher Add Task 2",
       "request": {
         "method": "POST",
@@ -568,6 +674,7 @@
         "pm.test('HTTP 403', () => pm.response.code===403);"
       ] } } ]
     },
+    
     {
       "name": "13 - Student Get Announcements",
       "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
@@ -785,6 +892,37 @@
   "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
         "let json=null; try{ json=pm.response.json(); }catch(e){}",
         "pm.test('业务码 200', () => json && json.code === 200)"
+      ] } } ]
+    },
+    {
+      "name": "15c - Student Get Task Details With Questions (expect 2 after deletion)",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/student/experiments/tasks/{{taskId}}", "host":["{{baseUrl}}"], "path":["api","student","experiments","tasks","{{taskId}}"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json(); pm.test('业务码 200', () => json && json.code===200);",
+        "const q = json && json.data && json.data.question;",
+        "pm.test('返回题目数组', () => Array.isArray(q));",
+        "pm.test('删除一题后剩余2题', () => Array.isArray(q) && q.length===2);",
+        "const contents = (q||[]).map(it => it && it.content || '');",
+        "pm.test('内容包含唯一标记', () => contents.every(c => typeof c==='string' && c.includes(pm.collectionVariables.get('uniqueToken'))));",
+        "pm.test('包含已更新题面', () => contents.some(c => c.includes('已更新')));",
+        "const ids = (q||[]).map(it => it && it.id).filter(Boolean);",
+        "pm.test('包含q1与q2', () => ids.includes(pm.collectionVariables.get('q1Id')) && ids.includes(pm.collectionVariables.get('q2Id')));",
+        "pm.test('不包含已删除的q3', () => !ids.includes(pm.collectionVariables.get('q3Id')));"
+      ] } } ]
+    },
+    {
+      "name": "15d - Student Update Question After Viewing (should fail 403)",
+      "request": {
+        "method": "PUT",
+        "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/questions/{{q1Id}}", "host": ["{{baseUrl}}"], "path": ["api","questions","{{q1Id}}"] },
+        "body": { "mode": "raw", "raw": "{\n  \"questionType\": \"SINGLE_CHOICE\",\n  \"content\": \"学生查看后尝试编辑-应被拒绝\",\n  \"options\": [\"A\", \"B\"],\n  \"answer\": \"A\",\n  \"explanation\": \"无\",\n  \"tags\": \"deny,test\",\n  \"score\": 1\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 403', () => pm.response.code===403);"
       ] } } ]
     },
     {
@@ -1047,6 +1185,21 @@
       },
       "event": [ { "listen": "test", "script": { "exec": [
   "pm.test('HTTP 200/204', function(){ pm.expect([200,204]).to.include(pm.response.code); });"
+      ] } } ]
+    },
+    {
+      "name": "17 - Teacher Search Questions By Unique Token",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{teacherAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/questions/search?keyword={{uniqueToken}}", "host":["{{baseUrl}}"], "path":["api","questions","search"], "query":[{"key":"keyword","value":"{{uniqueToken}}"}] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);",
+        "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+        "pm.test('至少返回两道题', () => arr.length >= 2);",
+        "const ids = arr.map(it => it && it.id).filter(Boolean);",
+        "pm.test('搜索命中q1与q2', () => ids.includes(pm.collectionVariables.get('q1Id')) && ids.includes(pm.collectionVariables.get('q2Id')));",
+        "pm.test('不包含已删除的q3', () => !ids.includes(pm.collectionVariables.get('q3Id')));"
       ] } } ]
     }
   ]
