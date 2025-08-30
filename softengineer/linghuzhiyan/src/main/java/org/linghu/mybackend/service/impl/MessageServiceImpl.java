@@ -95,16 +95,22 @@ public class MessageServiceImpl implements MessageService {
     @Override
     public List<SenderInfoDTO> getSendersByReceiver(String receiverUsername) {
         List<Message> messages = messageRepository.findByReceiver(receiverUsername);
-        java.util.Map<String, SenderInfoDTO> senderMap = new java.util.HashMap<>();
+        // 使用 (senderUsername, senderRole) 作为去重键，避免不同身份被后来的消息覆盖
+        java.util.Map<String, SenderInfoDTO> senderMap = new java.util.LinkedHashMap<>();
         for (Message msg : messages) {
-            // 查找发送者id和用户名
-            var userOpt = userRepository.findByUsername(msg.getSender());
-            String senderId = userOpt.map(u -> u.getId()).orElse("");
-            senderMap.put(msg.getSender(), SenderInfoDTO.builder()
-                    .senderId(senderId)
-                    .senderUsername(msg.getSender())
-                    .senderRole(msg.getSenderRole())
-                    .build());
+            String senderUsername = msg.getSender();
+            String role = msg.getSenderRole();
+            String key = senderUsername + "|" + role;
+            if (!senderMap.containsKey(key)) {
+                // 查找发送者id和用户名
+                var userOpt = userRepository.findByUsername(senderUsername);
+                String senderId = userOpt.map(u -> u.getId()).orElse("");
+                senderMap.put(key, SenderInfoDTO.builder()
+                        .senderId(senderId)
+                        .senderUsername(senderUsername)
+                        .senderRole(role)
+                        .build());
+            }
         }
         return new java.util.ArrayList<>(senderMap.values());
     }

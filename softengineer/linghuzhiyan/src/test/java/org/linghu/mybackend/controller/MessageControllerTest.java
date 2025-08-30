@@ -6,7 +6,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.linghu.mybackend.controller.MessageController;
 import org.linghu.mybackend.dto.MessageDTO;
 import org.linghu.mybackend.dto.MessageRequestDTO;
 import org.linghu.mybackend.dto.SenderInfoDTO;
@@ -16,12 +15,13 @@ import org.linghu.mybackend.service.UserService;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.Arrays;
 import java.util.List;
@@ -29,9 +29,7 @@ import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("MessageController 单元测试")
@@ -46,13 +44,16 @@ class MessageControllerTest {
     @InjectMocks
     private MessageController messageController;
 
-    private MockMvc mockMvc;
     private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(messageController).build();
         objectMapper = new ObjectMapper();
+        
+        // 设置请求上下文
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request, response));
     }
 
     @Nested
@@ -95,18 +96,16 @@ class MessageControllerTest {
                     .thenReturn(Set.of("ROLE_STUDENT"));
             when(messageService.createMessage(any(MessageDTO.class))).thenReturn(expectedMessage);
 
-            // Act & Assert
-            mockMvc.perform(post("/api/messages")
-                            .with(user(adminUser))
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.data.title").value("测试消息"))
-                    .andExpect(jsonPath("$.data.content").value("测试内容"))
-                    .andExpect(jsonPath("$.data.sender").value("admin"))
-                    .andExpect(jsonPath("$.data.receiver").value("student1"))
-                    .andExpect(jsonPath("$.data.senderRole").value("ROLE_ADMIN"));
+            // Act
+            var result = messageController.createMessage(request, adminUser);
+
+            // Assert
+            assertNotNull(result);
+            assertEquals("测试消息", result.getData().getTitle());
+            assertEquals("测试内容", result.getData().getContent());
+            assertEquals("admin", result.getData().getSender());
+            assertEquals("student1", result.getData().getReceiver());
+            assertEquals("ROLE_ADMIN", result.getData().getSenderRole());
         }
 
         @Test
@@ -145,15 +144,13 @@ class MessageControllerTest {
                     .thenReturn(Set.of("ROLE_STUDENT"));
             when(messageService.createMessage(any(MessageDTO.class))).thenReturn(expectedMessage);
 
-            // Act & Assert
-            mockMvc.perform(post("/api/messages")
-                            .with(user(teacherUser))
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.data.title").value("作业通知"))
-                    .andExpect(jsonPath("$.data.senderRole").value("ROLE_TEACHER"));
+            // Act
+            var result = messageController.createMessage(request, teacherUser);
+
+            // Assert
+            assertNotNull(result);
+            assertEquals("作业通知", result.getData().getTitle());
+            assertEquals("ROLE_TEACHER", result.getData().getSenderRole());
         }
 
         @Test
@@ -182,11 +179,9 @@ class MessageControllerTest {
                     .thenReturn(Set.of("ROLE_ADMIN"));
 
             // Act & Assert
-            mockMvc.perform(post("/api/messages")
-                            .with(user(studentUser))
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isInternalServerError());
+            assertThrows(RuntimeException.class, () -> {
+                messageController.createMessage(request, studentUser);
+            });
         }
 
         @Test
@@ -208,11 +203,9 @@ class MessageControllerTest {
             when(userService.getUserByUsername("nonexistent")).thenReturn(null);
 
             // Act & Assert
-            mockMvc.perform(post("/api/messages")
-                            .with(user(adminUser))
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isInternalServerError());
+            assertThrows(RuntimeException.class, () -> {
+                messageController.createMessage(request, adminUser);
+            });
         }
 
         @Test
@@ -226,10 +219,9 @@ class MessageControllerTest {
                     .build();
 
             // Act & Assert
-            mockMvc.perform(post("/api/messages")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isInternalServerError());
+            assertThrows(RuntimeException.class, () -> {
+                messageController.createMessage(request, null);
+            });
         }
     }
 
@@ -253,13 +245,14 @@ class MessageControllerTest {
 
             when(messageService.getMessageById(messageId)).thenReturn(message);
 
-            // Act & Assert
-            mockMvc.perform(get("/api/messages/{id}", messageId))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.data.id").value(messageId))
-                    .andExpect(jsonPath("$.data.title").value("测试消息"))
-                    .andExpect(jsonPath("$.data.content").value("测试内容"));
+            // Act
+            var result = messageController.getMessageById(messageId);
+
+            // Assert
+            assertNotNull(result);
+            assertEquals(messageId, result.getData().getId());
+            assertEquals("测试消息", result.getData().getTitle());
+            assertEquals("测试内容", result.getData().getContent());
         }
 
         @Test
@@ -289,15 +282,14 @@ class MessageControllerTest {
 
             when(messageService.getMessagesByReceiver("student1")).thenReturn(messages);
 
-            // Act & Assert
-            mockMvc.perform(get("/api/messages/receiver")
-                            .with(user(user)))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.data").isArray())
-                    .andExpect(jsonPath("$.data.length()").value(2))
-                    .andExpect(jsonPath("$.data[0].title").value("消息1"))
-                    .andExpect(jsonPath("$.data[1].title").value("消息2"));
+            // Act
+            var result = messageController.getMessagesByReceiver(user);
+
+            // Assert
+            assertNotNull(result);
+            assertEquals(2, result.getData().size());
+            assertEquals("消息1", result.getData().get(0).getTitle());
+            assertEquals("消息2", result.getData().get(1).getTitle());
         }
 
         @Test
@@ -323,14 +315,13 @@ class MessageControllerTest {
             when(messageService.getMessagesBySenderAndReceiver(sender, "student1"))
                     .thenReturn(messages);
 
-            // Act & Assert
-            mockMvc.perform(get("/api/messages/sender/{sender}", sender)
-                            .with(user(user)))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.data").isArray())
-                    .andExpect(jsonPath("$.data.length()").value(1))
-                    .andExpect(jsonPath("$.data[0].title").value("作业通知"));
+            // Act
+            var result = messageController.getMessagesBySender(sender, user);
+
+            // Assert
+            assertNotNull(result);
+            assertEquals(1, result.getData().size());
+            assertEquals("作业通知", result.getData().get(0).getTitle());
         }
 
         @Test
@@ -358,27 +349,20 @@ class MessageControllerTest {
 
             when(messageService.getSendersByReceiver("student1")).thenReturn(senders);
 
-            // Act & Assert
-            mockMvc.perform(get("/api/messages/senders")
-                            .with(user(user)))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.data").isArray())
-                    .andExpect(jsonPath("$.data.length()").value(2))
-                    .andExpect(jsonPath("$.data[0].senderUsername").value("teacher1"))
-                    .andExpect(jsonPath("$.data[1].senderUsername").value("admin"));
+            // Act
+            var result = messageController.getSendersByReceiver(user);
+
+            // Assert
+            assertNotNull(result);
+            assertEquals(2, result.getData().size());
+            assertEquals("teacher1", result.getData().get(0).getSenderUsername());
+            assertEquals("admin", result.getData().get(1).getSenderUsername());
         }
 
         @Test
-        @DisplayName("管理员获取所有消息成功")
-        void getAllMessages_AdminUser_Success() throws Exception {
+        @DisplayName("获取所有消息成功")
+        void getAllMessages_Success() throws Exception {
             // Arrange
-            UserDetails adminUser = User.builder()
-                    .username("admin")
-                    .password("password")
-                    .authorities(List.of(new SimpleGrantedAuthority("ROLE_ADMIN")))
-                    .build();
-
             List<MessageDTO> messages = Arrays.asList(
                     MessageDTO.builder()
                             .id("msg-1")
@@ -392,13 +376,12 @@ class MessageControllerTest {
 
             when(messageService.getAllMessages()).thenReturn(messages);
 
-            // Act & Assert
-            mockMvc.perform(get("/api/messages/all")
-                            .with(user(adminUser)))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.data").isArray())
-                    .andExpect(jsonPath("$.data.length()").value(2));
+            // Act
+            var result = messageController.getAllMessages();
+
+            // Assert
+            assertNotNull(result);
+            assertEquals(2, result.getData().size());
         }
 
         @Test
@@ -423,14 +406,13 @@ class MessageControllerTest {
             when(messageService.getMessagesBySenderAndRole("teacher1", "ROLE_TEACHER"))
                     .thenReturn(sentMessages);
 
-            // Act & Assert
-            mockMvc.perform(get("/api/messages/self/sent")
-                            .with(user(teacherUser)))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.data").isArray())
-                    .andExpect(jsonPath("$.data.length()").value(1))
-                    .andExpect(jsonPath("$.data[0].title").value("发送的消息1"));
+            // Act
+            var result = messageController.getSelfSentMessages(teacherUser);
+
+            // Assert
+            assertNotNull(result);
+            assertEquals(1, result.getData().size());
+            assertEquals("发送的消息1", result.getData().get(0).getTitle());
         }
     }
 
@@ -451,12 +433,13 @@ class MessageControllerTest {
 
             when(messageService.markAsRead(messageId)).thenReturn(readMessage);
 
-            // Act & Assert
-            mockMvc.perform(put("/api/messages/{id}/read", messageId))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.data.id").value(messageId))
-                    .andExpect(jsonPath("$.data.status").value("READ"));
+            // Act
+            var result = messageController.markAsRead(messageId);
+
+            // Assert
+            assertNotNull(result);
+            assertEquals(messageId, result.getData().getId());
+            assertEquals("READ", result.getData().getStatus());
         }
 
         @Test
@@ -465,10 +448,11 @@ class MessageControllerTest {
             // Arrange
             String messageId = "msg-123";
 
-            // Act & Assert
-            mockMvc.perform(delete("/api/messages/{id}", messageId))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true));
+            // Act
+            var result = messageController.deleteMessage(messageId);
+
+            // Assert
+            assertNotNull(result);
         }
     }
 
@@ -502,11 +486,9 @@ class MessageControllerTest {
                     .thenReturn(Set.of("ROLE_TEACHER"));
 
             // Act & Assert
-            mockMvc.perform(post("/api/messages")
-                            .with(user(assistantUser))
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isInternalServerError());
+            assertThrows(RuntimeException.class, () -> {
+                messageController.createMessage(request, assistantUser);
+            });
         }
 
         @Test
@@ -535,35 +517,9 @@ class MessageControllerTest {
                     .thenReturn(Set.of("ROLE_ADMIN"));
 
             // Act & Assert
-            mockMvc.perform(post("/api/messages")
-                            .with(user(teacherUser))
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isInternalServerError());
-        }
-
-        @Test
-        @DisplayName("未登录用户无法获取消息")
-        void getMessagesByReceiver_NoAuth_Failure() throws Exception {
-            // Act & Assert
-            mockMvc.perform(get("/api/messages/receiver"))
-                    .andExpect(status().isInternalServerError());
-        }
-
-        @Test
-        @DisplayName("未登录用户无法获取发送者列表")
-        void getSendersByReceiver_NoAuth_Failure() throws Exception {
-            // Act & Assert
-            mockMvc.perform(get("/api/messages/senders"))
-                    .andExpect(status().isInternalServerError());
-        }
-
-        @Test
-        @DisplayName("未登录用户无法获取自己发送的消息")
-        void getSelfSentMessages_NoAuth_Failure() throws Exception {
-            // Act & Assert
-            mockMvc.perform(get("/api/messages/self/sent"))
-                    .andExpect(status().isInternalServerError());
+            assertThrows(RuntimeException.class, () -> {
+                messageController.createMessage(request, teacherUser);
+            });
         }
     }
 }

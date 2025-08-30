@@ -12,6 +12,7 @@ public class UserException extends BaseException {
     public static final int INVALID_OLD_PASSWORD = 100005;
     public static final int ROLE_NOT_AUTHORIZED = 100006;
     public static final int USER_DELETED = 100007;
+    public static final int ROLE_ALREADY_ASSIGNED = 100008;
     
     public UserException(int code, String message) {
         super(code, message);
@@ -41,5 +42,9 @@ public class UserException extends BaseException {
     
     public static UserException userDeleted() {
         return new UserException(USER_DELETED, "用户已被删除，无法进行此操作");
+    }
+
+    public static UserException roleAlreadyAssigned() {
+        return new UserException(ROLE_ALREADY_ASSIGNED, "目标用户已拥有该角色");
     }
 }

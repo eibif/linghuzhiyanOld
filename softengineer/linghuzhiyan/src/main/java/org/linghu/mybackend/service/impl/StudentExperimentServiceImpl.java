@@ -8,6 +8,7 @@ import org.linghu.mybackend.service.StudentExperimentService;
 import org.linghu.mybackend.util.MinioUtil;
 import org.linghu.mybackend.constants.TaskType;
 import org.linghu.mybackend.utils.JsonUtils;
+import org.linghu.mybackend.config.JudgeConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -41,6 +42,7 @@ public class StudentExperimentServiceImpl implements StudentExperimentService {
     private final ExperimentEvaluationRepository evaluationRepository;
     private final QuestionService questionService;
     private final MinioUtil minioUtil;
+    private final JudgeConfig judgeConfig;
 
     @Autowired
     public StudentExperimentServiceImpl(
@@ -51,7 +53,8 @@ public class StudentExperimentServiceImpl implements StudentExperimentService {
             ExperimentSubmissionRepository submissionRepository,
             ExperimentEvaluationRepository evaluationRepository,
             QuestionService questionService,
-            MinioUtil minioUtil) {
+            MinioUtil minioUtil,
+            JudgeConfig judgeConfig) {
         this.experimentRepository = experimentRepository;
         this.userRepository = userRepository;
         this.experimentTaskRepository = experimentTaskRepository;
@@ -60,6 +63,7 @@ public class StudentExperimentServiceImpl implements StudentExperimentService {
         this.evaluationRepository = evaluationRepository;
         this.questionService = questionService;
         this.minioUtil = minioUtil;
+        this.judgeConfig = judgeConfig;
     }
 
     @Override
@@ -979,7 +983,7 @@ public class StudentExperimentServiceImpl implements StudentExperimentService {
 
         // 将cmd添加到requestData
         requestData.put("cmd", Arrays.asList(cmdMap)); // 发送HTTP请求到评测服务
-        String evaluationServiceUrl = "http://10.128.54.190:5050/run";
+        String evaluationServiceUrl = judgeConfig.getRunUrl();
         String responseJson = sendHttpRequest(evaluationServiceUrl, JsonUtils.toJsonString(requestData));
 
         // 解析评测结果

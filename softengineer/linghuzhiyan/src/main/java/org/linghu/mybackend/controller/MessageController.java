@@ -85,18 +85,34 @@ public class MessageController {
             throw new RuntimeException("未知用户角色，无法发送消息");
         }
 
-        // 获取当前登录用户的最高权限等级
-        String senderRole;
-        if (isAdmin) {
-            senderRole = "ROLE_ADMIN";
-        } else if (isTeacher) {
-            senderRole = "ROLE_TEACHER";
-        } else if (isAssistant) {
-            senderRole = "ROLE_ASSISTANT";
-        } else if (isStudent) {
-            senderRole = "ROLE_STUDENT";
-        } else {
-            senderRole = "UNKNOWN";
+        // 发送者角色：优先使用请求体中的 senderRole（需确认为当前用户拥有该角色），否则回退为用户最高角色
+        String requestedSenderRole = messageRequestDTO.getSenderRole();
+        String senderRole = null;
+        if (requestedSenderRole != null && !requestedSenderRole.isBlank()) {
+            String tmp = requestedSenderRole.trim().toUpperCase();
+            // 兼容无前缀形式（如 ADMIN/TEACHER/ASSISTANT/STUDENT）
+            final String normalized = tmp.startsWith("ROLE_") ? tmp : ("ROLE_" + tmp);
+            // 允许的角色常量
+            List<String> allowed = java.util.List.of("ROLE_ADMIN", "ROLE_TEACHER", "ROLE_ASSISTANT", "ROLE_STUDENT");
+            if (allowed.contains(normalized)) {
+                boolean owns = authorities.stream().anyMatch(a -> a.getAuthority().equals(normalized));
+                if (owns) {
+                    senderRole = normalized;
+                }
+            }
+        }
+        if (senderRole == null) {
+            if (isAdmin) {
+                senderRole = "ROLE_ADMIN";
+            } else if (isTeacher) {
+                senderRole = "ROLE_TEACHER";
+            } else if (isAssistant) {
+                senderRole = "ROLE_ASSISTANT";
+            } else if (isStudent) {
+                senderRole = "ROLE_STUDENT";
+            } else {
+                senderRole = "UNKNOWN";
+            }
         }
 
         MessageDTO dto = MessageDTO.builder()

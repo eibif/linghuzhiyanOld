@@ -54,9 +54,51 @@ services:
       timeout: 5s
       retries: 10
 
+  go-judge:
+    image: criyle/go-judge:latest
+    container_name: go-judge
+    privileged: true
+    shm_size: 256m
+    environment:
+      TZ: Asia/Shanghai
+      # 启用详细日志
+      ES_RELEASE: "false"
+      # HTTP服务端口
+      ES_HTTP_ADDR: ":5050"
+      # 启用gRPC服务
+      ES_ENABLE_GRPC: "true"
+      ES_GRPC_ADDR: ":5051"
+      # 启用监控和调试
+      ES_ENABLE_METRICS: "true"
+      ES_ENABLE_DEBUG: "true"
+      ES_MONITOR_ADDR: ":5052"
+      # 资源限制配置
+      ES_PARALLELISM: "4"
+      ES_OUTPUT_LIMIT: "256m"
+      ES_COPY_OUT_LIMIT: "64m"
+      ES_TMP_FS_PARAM: "size=256m,nr_inodes=8k"
+      # 文件存储配置
+      ES_FILE_TIMEOUT: "30m"
+    ports:
+      - "5050:5050"  # HTTP API
+      - "5051:5051"  # gRPC API  
+      - "5052:5052"  # 监控和调试端点
+    volumes:
+      # 共享内存文件系统，用于高性能文件操作
+      - /dev/shm:/dev/shm
+      # 可选：持久化文件存储（如果需要）
+      - judge_data:/tmp/judge
+    healthcheck:
+      test: ["CMD", "sh", "-c", "pidof go-judge || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
   app:
     build:
-      context: ..
+      context: .
       dockerfile: Dockerfile
     image: linghuzhiyan-app:latest
     container_name: linghuzhiyan
@@ -67,11 +109,16 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      go-judge:
+        condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: docker
       # HS512 requires >= 512-bit (64-byte) secret. Do NOT use this in production; rotate via secrets manager.
       JWT_SECRET: "b7590f4f1a0d2e3c9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f0b1a2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f7a8b9c0d1e2f3a4b5"
       TZ: Asia/Shanghai
+      # go-judge评测服务配置
+      JUDGE_SERVICE_URL: "http://go-judge:5050"
+      JUDGE_GRPC_URL: "go-judge:5051"
     ports:
       - "8080:8080"
     # If you have Flyway, ensure migrations run at app startup
@@ -81,3 +128,4 @@ volumes:
   mysql_data:
   mongo_data:
   minio_data:
+  judge_data:

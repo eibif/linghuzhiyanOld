@@ -1,14 +1,16 @@
 {
   "info": {
     "name": "LingHuZhiYan E2E Smoke",
-    "description": "端到端用例：管理员登录→注册教师/学生→赋予教师角色→发公告/消息→教师创建并发布实验与任务→管理员分配→学生获取与发讨论",
+  "description": "端到端用例：管理员登录→注册教师/学生→赋予教师角色→发公告/消息→教师创建并发布实验与任务→教师分配(单人+全体)→学生获取与发讨论(审批与编辑流程)→权限负例覆盖",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
+  { "key": "runId", "value": "", "type": "string" },
     { "key": "authHeader", "value": "", "type": "string" },
     { "key": "adminUsername", "value": "user1", "type": "string" },
     { "key": "adminPassword", "value": "string", "type": "string" },
+  { "key": "adminUserId", "value": "", "type": "string" },
     { "key": "teacherUsername", "value": "teacher01", "type": "string" },
     { "key": "teacherEmail", "value": "teacher01@example.com", "type": "string" },
     { "key": "teacherPassword", "value": "Tpass123", "type": "string" },
@@ -22,6 +24,8 @@
     { "key": "student3Email", "value": "student03@example.com", "type": "string" },
     { "key": "student3Password", "value": "Spass123", "type": "string" },
     { "key": "teacherAuth", "value": "", "type": "string" },
+  { "key": "assistantAuth", "value": "", "type": "string" },
+  { "key": "adminTeacherAuth", "value": "", "type": "string" },
     { "key": "studentAuth", "value": "", "type": "string" },
   { "key": "student2Auth", "value": "", "type": "string" },
     { "key": "teacherUserId", "value": "", "type": "string" },
@@ -30,12 +34,22 @@
   { "key": "student3UserId", "value": "", "type": "string" },
   { "key": "adminAvatarUrl", "value": "", "type": "string" },
     { "key": "experimentId", "value": "", "type": "string" },
-    { "key": "taskId", "value": "", "type": "string" },
+  { "key": "taskId", "value": "", "type": "string" },
+  { "key": "taskId2", "value": "", "type": "string" },
+  { "key": "experimentIdUnassigned", "value": "", "type": "string" },
     { "key": "announcementId", "value": "", "type": "string" },
-    { "key": "messageId", "value": "", "type": "string" },
+  { "key": "messageId", "value": "", "type": "string" },
+    { "key": "messageIdFromTeacher", "value": "", "type": "string" },
+  { "key": "assistantMessageId", "value": "", "type": "string" },
   { "key": "discussionId", "value": "", "type": "string" },
   { "key": "commentId", "value": "", "type": "string" },
-  { "key": "replyCommentId", "value": "", "type": "string" }
+  { "key": "replyCommentId", "value": "", "type": "string" },
+  { "key": "resourceId", "value": "", "type": "string" },
+  { "key": "resourceId2", "value": "", "type": "string" }
+  , { "key": "q1Id", "value": "", "type": "string" }
+  , { "key": "q2Id", "value": "", "type": "string" }
+  , { "key": "q3Id", "value": "", "type": "string" }
+  , { "key": "uniqueToken", "value": "UNIQ-{{runId}}-Q", "type": "string" }
   ],
   "item": [
     {
@@ -51,11 +65,13 @@
         }
       },
       "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
-        "const json = pm.response.json();",
-        "pm.test('HTTP 200', () => pm.response.code === 200);",
+  "const json = pm.response.json();",
+  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
         "pm.test('业务码 200', () => json && json.code === 200);",
         "pm.test('返回 token', () => json && json.data && json.data.token);",
-        "if (json && json.data) { pm.collectionVariables.set('authHeader', `${json.data.tokenType} ${json.data.token}`); }"
+  "if (json && json.data) { pm.collectionVariables.set('authHeader', `${json.data.tokenType} ${json.data.token}`); }",
+  "if (!pm.collectionVariables.get('runId')) { pm.collectionVariables.set('runId', String(Date.now())); }",
+  "pm.collectionVariables.set('uniqueToken', `UNIQ-${pm.collectionVariables.get('runId')}-Q`);"
       ] } } ]
     },
     {
@@ -67,7 +83,7 @@
         "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{teacherUsername}}\",\n  \"email\": \"{{teacherEmail}}\",\n  \"password\": \"{{teacherPassword}}\"\n}" }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-  "pm.test('HTTP 200/或用户名已存在(400)', () => [200,400].includes(pm.response.code));",
+  "pm.test('HTTP 200/或用户名已存在(400)', function(){ pm.expect([200,400]).to.include(pm.response.code); });",
   "if (pm.response.code === 200) { const json = pm.response.json(); pm.test('业务码 200', () => json && json.code === 200); }"
       ] } } ]
     },
@@ -80,7 +96,7 @@
         "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{studentUsername}}\",\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"{{studentPassword}}\"\n}" }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-  "pm.test('HTTP 200/或用户名已存在(400)', () => [200,400].includes(pm.response.code));",
+  "pm.test('HTTP 200/或用户名已存在(400)', function(){ pm.expect([200,400]).to.include(pm.response.code); });",
   "if (pm.response.code === 200) { const json = pm.response.json(); pm.test('业务码 200', () => json && json.code === 200); }"
       ] } } ]
     },
@@ -93,7 +109,7 @@
         "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{student2Username}}\",\n  \"email\": \"{{student2Email}}\",\n  \"password\": \"{{student2Password}}\"\n}" }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-  "pm.test('HTTP 200/或用户名已存在(400)', () => [200,400].includes(pm.response.code));",
+  "pm.test('HTTP 200/或用户名已存在(400)', function(){ pm.expect([200,400]).to.include(pm.response.code); });",
   "if (pm.response.code === 200) { const json = pm.response.json(); pm.test('业务码 200', () => json && json.code === 200); }"
       ] } } ]
     },
@@ -118,9 +134,10 @@
         "url": { "raw": "{{baseUrl}}/api/users?pageNum=1&pageSize=100", "host": ["{{baseUrl}}"], "path": ["api","users"], "query": [ {"key":"pageNum","value":"1"}, {"key":"pageSize","value":"100"} ] }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-        "const json = pm.response.json();",
-        "pm.test('HTTP 200', () => pm.response.code===200);",
+    "const json = pm.response.json();",
+  "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
         "const list = (json && json.data && json.data.list) || [];",
+    "const me = list.find(u => u.username===pm.collectionVariables.get('adminUsername'));",
     "const t = list.find(u => u.username===pm.collectionVariables.get('teacherUsername'));",
     "const s = list.find(u => u.username===pm.collectionVariables.get('studentUsername'));",
     "const s2 = list.find(u => u.username===pm.collectionVariables.get('student2Username'));",
@@ -136,19 +153,79 @@
   "pm.test('业务码 200', () => json && json.code === 200)"
       ] } } ]
     },
-  {
-    "name": "03.2.1 - Admin Set Teacher Role",
+    {
+      "name": "05a - Admin Set Self Assistant Role",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{authHeader}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/users/setrole", "host": ["{{baseUrl}}"], "path": ["api","users","setrole"] },
+        "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{adminUserId}}\",\n  \"roleId\": \"ROLE_ASSISTANT\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200 或 100008(已拥有)', () => json && (json.code===200 || json.code===100008));"
+      ] } } ]
+    },
+    {
+      "name": "05b - Admin Login As Assistant",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/users/login", "host": ["{{baseUrl}}"], "path": ["api","users","login"] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\",\n  \"role\": \"ASSISTANT\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "pm.collectionVariables.set('assistantAuth', `${json.data.tokenType} ${json.data.token}`);"
+      ] } } ]
+    },
+    {
+      "name": "05aa - Admin Set Self Teacher Role",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{authHeader}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/users/setrole", "host": ["{{baseUrl}}"], "path": ["api","users","setrole"] },
+        "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{adminUserId}}\",\n  \"roleId\": \"ROLE_TEACHER\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200 或 100008(已拥有)', () => json && (json.code===200 || json.code===100008));"
+      ] } } ]
+    },
+    {
+      "name": "05bb - Admin Login As Teacher",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/users/login", "host": ["{{baseUrl}}"], "path": ["api","users","login"] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\",\n  \"role\": \"TEACHER\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "pm.collectionVariables.set('adminTeacherAuth', `${json.data.tokenType} ${json.data.token}`);",
+        "pm.test('拿到 adminTeacherAuth', () => !!pm.collectionVariables.get('adminTeacherAuth'));"
+      ] } } ]
+    },
+    {
+      "name": "05 - Admin Set Teacher Role",
       "request": {
         "method": "POST",
         "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{authHeader}}" } ],
         "url": { "raw": "{{baseUrl}}/api/users/setrole", "host": ["{{baseUrl}}"], "path": ["api","users","setrole"] },
         "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{teacherUserId}}\",\n  \"roleId\": \"ROLE_TEACHER\"\n}" }
       },
-      "event": [ { "listen": "test", "script": { "exec": [
-  "pm.test('HTTP 200', () => pm.response.code===200);",
+    "event": [ { "listen": "test", "script": { "exec": [
+  "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
   "const json = pm.response.json();",
-  "pm.test('业务码 200', () => json && json.code === 200)"
-      ] } } ]
+  "pm.test('业务码 200 或 已拥有角色(100008)', () => json && (json.code === 200 || json.code === 100008));",
+  "if (json && json.code === 100008) { pm.test('提示已拥有角色', () => json.message && json.message.includes('已拥有')); }"
+    ] } } ]
     },
   {
     "name": "03.2.2 - Admin Get Teacher User Detail",
@@ -318,7 +395,7 @@
       "event": [ { "listen": "test", "script": { "exec": [
         "const json = pm.response.json();",
   "if (json && json.data && json.data.id) pm.collectionVariables.set('announcementId', json.data.id);",
-  "pm.test('HTTP 200', () => pm.response.code===200);",
+  "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
   "pm.test('业务码 200', () => json && json.code === 200);"
       ] } } ]
     },
@@ -328,12 +405,12 @@
         "method": "POST",
         "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{authHeader}}" } ],
         "url": { "raw": "{{baseUrl}}/api/messages", "host": ["{{baseUrl}}"], "path": ["api","messages"] },
-        "body": { "mode": "raw", "raw": "{\n  \"title\": \"测试消息\",\n  \"content\": \"这是一条发给学生的测试消息\",\n  \"receiver\": \"{{studentUsername}}\"\n}" }
+  "body": { "mode": "raw", "raw": "{\n  \"title\": \"测试消息-{{runId}}\",\n  \"content\": \"这是一条发给学生的测试消息\",\n  \"receiver\": \"{{studentUsername}}\",\n  \"senderRole\": \"ROLE_ADMIN\"\n}" }
       },
       "event": [ { "listen": "test", "script": { "exec": [
         "const json = pm.response.json();",
   "if (json && json.data && json.data.id) pm.collectionVariables.set('messageId', json.data.id);",
-  "pm.test('HTTP 200', () => pm.response.code===200);",
+  "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
   "pm.test('业务码 200', () => json && json.code === 200);"
       ] } } ]
     },
@@ -346,14 +423,46 @@
         "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{teacherUsername}}\",\n  \"password\": \"{{teacherPassword}}\",\n  \"role\": \"TEACHER\"\n}" }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-        "const json = pm.response.json();",
+    "const json = pm.response.json();",
   "pm.collectionVariables.set('teacherAuth', `${json.data.tokenType} ${json.data.token}`);",
-  "pm.test('HTTP 200', () => pm.response.code===200);",
+  "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
   "pm.test('返回 token', () => json && json.data && json.data.token);"
       ] } } ]
     },
     {
-      "name": "10 - Teacher Create Experiment",
+      "name": "08a - Teacher Send Message to Student",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/messages", "host": ["{{baseUrl}}"], "path": ["api","messages"] },
+  "body": { "mode": "raw", "raw": "{\n  \"title\": \"老师给学生的通知-{{runId}}\",\n  \"content\": \"请按时完成实验任务\",\n  \"receiver\": \"{{studentUsername}}\",\n  \"senderRole\": \"ROLE_TEACHER\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "if(json && json.data && json.data.id){ pm.collectionVariables.set('messageIdFromTeacher', json.data.id); }",
+        "pm.test('拿到 messageIdFromTeacher', () => !!pm.collectionVariables.get('messageIdFromTeacher'));"
+      ] } } ]
+    },
+    {
+      "name": "08aa - Assistant(Admin) Send Message to Student",
+      "request": {
+        "method": "POST",
+  "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{assistantAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/messages", "host": ["{{baseUrl}}"], "path": ["api","messages"] },
+  "body": { "mode": "raw", "raw": "{\n  \"title\": \"助教给学生的通知-{{runId}}\",\n  \"content\": \"来自管理员(助教身份)的消息\",\n  \"receiver\": \"{{studentUsername}}\",\n  \"senderRole\": \"ROLE_ASSISTANT\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "if(json && json.data && json.data.id){ pm.collectionVariables.set('assistantMessageId', json.data.id); }",
+        "pm.test('拿到 assistantMessageId', () => !!pm.collectionVariables.get('assistantMessageId'));"
+      ] } } ]
+    },
+    {
+      "name": "09 - Teacher Create Experiment",
       "request": {
         "method": "POST",
         "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
@@ -364,7 +473,7 @@
         "const json = pm.response.json();",
         "pm.collectionVariables.set('experimentId', (json.data && json.data.id) || '');",
   "pm.test('拿到 experimentId', () => !!pm.collectionVariables.get('experimentId'));",
-  "pm.test('HTTP 200', () => pm.response.code===200);",
+  "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
   "pm.test('业务码 200', () => json && json.code === 200);"
       ] } } ]
     },
@@ -376,13 +485,88 @@
         "url": { "raw": "{{baseUrl}}/api/experiments/{{experimentId}}/publish", "host": ["{{baseUrl}}"], "path": ["api","experiments","{{experimentId}}","publish"] }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-        "pm.test('HTTP 200', () => pm.response.code===200);",
+  "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
         "const json = pm.response.json();",
         "pm.test('业务码 200', () => json && json.code === 200)"
       ] } } ]
     },
     {
-      "name": "11 - Teacher Add Task",
+      "name": "09.6 - Teacher Update Experiment After Publish",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/experiments/{{experimentId}}", "host": ["{{baseUrl}}"], "path": ["api","experiments","{{experimentId}}"] },
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"自动化实验-已更新\",\n  \"description\": \"发布后由老师更新的描述\",\n  \"status\": \"PUBLISHED\",\n  \"startTime\": \"2030-01-01T00:00:00\",\n  \"endTime\": \"2030-12-31T23:59:59\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "pm.test('更新返回同一ID', () => json && json.data && json.data.id===pm.collectionVariables.get('experimentId'));",
+        "if(json && json.data && json.data.name){ pm.collectionVariables.set('experimentNameAfter', json.data.name); }",
+        "pm.test('名称包含已更新', () => (pm.collectionVariables.get('experimentNameAfter')||'').includes('已更新'));"
+      ] } } ]
+    },
+    {
+      "name": "09.7 - Admin(Teacher role) Get Experiments (see updated)",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "{{adminTeacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/experiments?pageNum=1&pageSize=50", "host": ["{{baseUrl}}"], "path": ["api","experiments"], "query": [ {"key":"pageNum","value":"1"}, {"key":"pageSize","value":"50"} ] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){};",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "const list = (json && json.data && Array.isArray(json.data.list)) ? json.data.list : [];",
+        "const eid = pm.collectionVariables.get('experimentId');",
+        "const updatedName = pm.collectionVariables.get('experimentNameAfter') || '';",
+        "const it = list.find(e => e && e.id===eid);",
+        "pm.test('能查到该实验', () => !!it);",
+        "pm.test('名称为已更新版本', () => it && (it.name || '') === updatedName);"
+      ] } } ]
+    },
+    {
+      "name": "09.75 - Admin(Teacher role) Unpublish Other's Experiment (should fail 403)",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Authorization", "value": "{{adminTeacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/experiments/{{experimentId}}/unpublish", "host": ["{{baseUrl}}"], "path": ["api","experiments","{{experimentId}}","unpublish"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 403', () => pm.response.code===403);"
+      ] } } ]
+    },
+    {
+      "name": "09.65 - Admin(Teacher role) Update Other's Experiment (should fail 403)",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{adminTeacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/experiments/{{experimentId}}", "host": ["{{baseUrl}}"], "path": ["api","experiments","{{experimentId}}"] },
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"管理员(老师身份)尝试修改-应禁止\",\n  \"description\": \"非创建者不应允许编辑\",\n  \"status\": \"PUBLISHED\",\n  \"startTime\": \"2030-01-01T00:00:00\",\n  \"endTime\": \"2030-12-31T23:59:59\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 403', () => pm.response.code===403);"
+      ] } } ]
+    },
+    {
+      "name": "09.8 - Teacher Create Another Experiment (DRAFT, unassigned)",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/experiments", "host": ["{{baseUrl}}"], "path": ["api","experiments"] },
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"未分配草稿实验-{{runId}}\",\n  \"description\": \"仅用于验证学生不应看到\",\n  \"status\": \"DRAFT\",\n  \"startTime\": \"2031-01-01T00:00:00\",\n  \"endTime\": \"2031-12-31T23:59:59\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "if(json && json.data && json.data.id){ pm.collectionVariables.set('experimentIdUnassigned', json.data.id); }",
+        "pm.test('记录 experimentIdUnassigned', () => !!pm.collectionVariables.get('experimentIdUnassigned'));"
+      ] } } ]
+    },
+    {
+      "name": "10 - Teacher Add Task",
       "request": {
         "method": "POST",
         "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
@@ -393,36 +577,203 @@
         "const json = pm.response.json();",
         "pm.collectionVariables.set('taskId', (json.data && json.data.id) || '');",
   "pm.test('拿到 taskId', () => !!pm.collectionVariables.get('taskId'));",
-  "pm.test('HTTP 200', () => pm.response.code===200);",
+  "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
   "pm.test('业务码 200', () => json && json.code === 200);"
       ] } } ]
     },
     {
-      "name": "12 - Admin Assign Task To Student",
+      "name": "10.1 - Teacher Update Task (expect success)",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/experiments/tasks/{{experimentId}}/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["api","experiments","tasks","{{experimentId}}","{{taskId}}"] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"任务一-已更新\",\n  \"description\": \"更新后的描述\",\n  \"taskType\": \"OTHER\",\n  \"question\": [\"2+2=?\", \"4\"],\n  \"required\": true\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "pm.test('返回同一任务ID', () => json && json.data && json.data.id===pm.collectionVariables.get('taskId'));",
+        "if(json && json.data && json.data.title){ pm.collectionVariables.set('taskTitleAfter', json.data.title); }",
+        "pm.test('标题包含已更新', () => (pm.collectionVariables.get('taskTitleAfter')||'').includes('已更新'));"
+      ] } } ]
+    },
+    {
+      "name": "10.2 - Admin(Teacher role) Update Teacher's Task (should fail 403)",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{adminTeacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/experiments/tasks/{{experimentId}}/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["api","experiments","tasks","{{experimentId}}","{{taskId}}"] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"管理员(老师身份)尝试修改任务-应禁止\",\n  \"description\": \"非创建者不应允许编辑\",\n  \"taskType\": \"OTHER\",\n  \"question\": [\"1+1=?\", \"2\"],\n  \"required\": true\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 403', () => pm.response.code===403);"
+      ] } } ]
+    },
+    {
+      "name": "10.3 - Teacher Create Question 1",
       "request": {
         "method": "POST",
-        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{authHeader}}" } ],
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/questions", "host": ["{{baseUrl}}"], "path": ["api","questions"] },
+        "body": { "mode": "raw", "raw": "{\n  \"questionType\": \"SINGLE_CHOICE\",\n  \"content\": \"{{uniqueToken}}-1: 2+2=?\",\n  \"options\": [\"A.1\", \"B.4\", \"C.3\"],\n  \"answer\": \"B\",\n  \"explanation\": \"加法题\",\n  \"tags\": \"math,auto\",\n  \"score\": 5\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "if(json && json.data && json.data.id){ pm.collectionVariables.set('q1Id', json.data.id); }",
+        "pm.test('记录 q1Id', () => !!pm.collectionVariables.get('q1Id'));"
+      ] } } ]
+    },
+    {
+      "name": "10.31 - Teacher Create Question 2",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/questions", "host": ["{{baseUrl}}"], "path": ["api","questions"] },
+        "body": { "mode": "raw", "raw": "{\n  \"questionType\": \"SINGLE_CHOICE\",\n  \"content\": \"{{uniqueToken}}-2: 3+5=?\",\n  \"options\": [\"A.7\", \"B.8\", \"C.9\"],\n  \"answer\": \"B\",\n  \"explanation\": \"加法题\",\n  \"tags\": \"math,auto\",\n  \"score\": 5\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "if(json && json.data && json.data.id){ pm.collectionVariables.set('q2Id', json.data.id); }",
+        "pm.test('记录 q2Id', () => !!pm.collectionVariables.get('q2Id'));"
+      ] } } ]
+    },
+    {
+      "name": "10.32 - Teacher Create Question 3",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/questions", "host": ["{{baseUrl}}"], "path": ["api","questions"] },
+        "body": { "mode": "raw", "raw": "{\n  \"questionType\": \"QA\",\n  \"content\": \"{{uniqueToken}}-3: 简述栈与队列的区别\",\n  \"options\": null,\n  \"answer\": \"先进后出 vs 先进先出\",\n  \"explanation\": \"基础数据结构\",\n  \"tags\": \"ds,auto\",\n  \"score\": 10\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "if(json && json.data && json.data.id){ pm.collectionVariables.set('q3Id', json.data.id); }",
+        "pm.test('记录 q3Id', () => !!pm.collectionVariables.get('q3Id'));"
+      ] } } ]
+    },
+    {
+      "name": "10.35 - Teacher Update Task Questions (bind q1/q2/q3)",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/experiments/tasks/{{experimentId}}/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["api","experiments","tasks","{{experimentId}}","{{taskId}}"] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"任务一-题目绑定\",\n  \"description\": \"绑定三道题目\",\n  \"taskType\": \"OTHER\",\n  \"question\": [\"{{q1Id}}\", \"{{q2Id}}\", \"{{q3Id}}\"],\n  \"required\": true\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json(); pm.test('业务码 200', () => json && json.code===200);",
+        "pm.test('返回同一任务ID', () => json && json.data && json.data.id===pm.collectionVariables.get('taskId'));"
+      ] } } ]
+    },
+    {
+      "name": "10.33 - Teacher Update Question 2",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/questions/{{q2Id}}", "host": ["{{baseUrl}}"], "path": ["api","questions","{{q2Id}}"] },
+        "body": { "mode": "raw", "raw": "{\n  \"questionType\": \"SINGLE_CHOICE\",\n  \"content\": \"{{uniqueToken}}-2: 3+5=? (已更新)\",\n  \"options\": [\"A.7\", \"B.8\", \"C.9\"],\n  \"answer\": \"B\",\n  \"explanation\": \"更新解析\",\n  \"tags\": \"math,auto,edited\",\n  \"score\": 5\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json(); pm.test('业务码 200', () => json && json.code===200);",
+        "pm.test('题目2已更新', () => json && json.data && typeof json.data.content==='string' && json.data.content.includes('已更新'));"
+      ] } } ]
+    },
+    {
+      "name": "10.34 - Teacher Delete Question 3",
+      "request": {
+        "method": "DELETE",
+        "header": [ { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/questions/{{q3Id}}", "host": ["{{baseUrl}}"], "path": ["api","questions","{{q3Id}}"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){};",
+        "pm.test('业务码 200', () => json && json.code===200);"
+      ] } } ]
+    },
+    {
+      "name": "10b - Teacher Add Task 2",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/experiments/tasks/{{experimentId}}", "host": ["{{baseUrl}}"], "path": ["api","experiments","tasks","{{experimentId}}"] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"任务二\",\n  \"description\": \"用于删除验证\",\n  \"taskType\": \"OTHER\",\n  \"question\": [\"3+5=?\", \"8\"],\n  \"required\": false\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "const json = pm.response.json();",
+        "pm.collectionVariables.set('taskId2', (json.data && json.data.id) || '');",
+        "pm.test('拿到 taskId2', () => !!pm.collectionVariables.get('taskId2'));",
+        "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
+        "pm.test('业务码 200', () => json && json.code === 200);"
+      ] } } ]
+    },
+    {
+      "name": "10c - Teacher Delete Task 2 (expect success)",
+      "request": {
+        "method": "DELETE",
+        "header": [ { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/experiments/tasks/{{experimentId}}/{{taskId2}}", "host": ["{{baseUrl}}"], "path": ["api","experiments","tasks","{{experimentId}}","{{taskId2}}"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
+        "let json=null; try{ json=pm.response.json(); }catch(e){};",
+        "pm.test('业务码 200', () => json && json.code === 200);",
+        "pm.collectionVariables.unset('taskId2');"
+      ] } } ]
+    },
+    {
+      "name": "11 - Teacher Assign Task To Student",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
         "url": { "raw": "{{baseUrl}}/api/experiments/assignments/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["api","experiments","assignments","{{taskId}}"] },
         "body": { "mode": "raw", "raw": "{\n  \"userIds\": [\"{{studentUserId}}\"]\n}" }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-        "pm.test('HTTP 200', () => pm.response.code===200);",
+  "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
         "const json = pm.response.json();",
         "pm.test('业务码 200', () => json && json.code === 200)"
       ] } } ]
     },
     {
-      "name": "12b - Admin Assign Task To Student2",
+      "name": "11b - Teacher Assign Task To All Students",
       "request": {
         "method": "POST",
-        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{authHeader}}" } ],
-        "url": { "raw": "{{baseUrl}}/api/experiments/assignments/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["api","experiments","assignments","{{taskId}}"] },
-        "body": { "mode": "raw", "raw": "{\n  \"userIds\": [\"{{student2UserId}}\"]\n}" }
+        "header": [ { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/experiments/assignments/{{taskId}}/all", "host": ["{{baseUrl}}"], "path": ["api","experiments","assignments","{{taskId}}","all"] }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-        "pm.test('HTTP 200', () => pm.response.code===200);",
-        "const json = pm.response.json();",
-        "pm.test('业务码 200', () => json && json.code === 200)"
+  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+        "let json = null; try { json = pm.response.json(); } catch (e) {};",
+        "pm.test('业务码 200', function () { pm.expect(json).to.be.an('object'); pm.expect(json).to.have.property('code', 200); });"
+      ] } } ]
+    },
+    {
+      "name": "11c - Teacher Get Assignments And Verify Student2 Included",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/experiments/assignments/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["api","experiments","assignments","{{taskId}}"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+  "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
+        "let json=null; try{ json=pm.response.json(); }catch(e){};",
+        "pm.test('业务码 200', () => json && json.code === 200);",
+        "const list = (json && Array.isArray(json.data)) ? json.data : [];",
+        "const s1 = pm.collectionVariables.get('studentUserId');",
+        "const s2 = pm.collectionVariables.get('student2UserId');",
+        "const hasS1 = list.some(u => (u && (u.id===s1 || u.username===pm.collectionVariables.get('studentUsername'))));",
+        "const hasS2 = list.some(u => (u && (u.id===s2 || u.username===pm.collectionVariables.get('student2Username'))));",
+        "pm.test('包含学生1', () => hasS1);",
+        "pm.test('包含学生2(通过分配给全体)', () => hasS2);"
       ] } } ]
     },
     {
@@ -436,7 +787,7 @@
       "event": [ { "listen": "test", "script": { "exec": [
         "const json = pm.response.json();",
   "pm.collectionVariables.set('studentAuth', `${json.data.tokenType} ${json.data.token}`);",
-  "pm.test('HTTP 200', () => pm.response.code===200);",
+  "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
   "pm.test('返回 token', () => json && json.data && json.data.token);"
       ] } } ]
     },
@@ -451,17 +802,69 @@
       "event": [ { "listen": "test", "script": { "exec": [
         "const json = pm.response.json();",
   "pm.collectionVariables.set('student2Auth', `${json.data.tokenType} ${json.data.token}`);",
-  "pm.test('HTTP 200', () => pm.response.code===200);",
+  "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
   "pm.test('返回 token', () => json && json.data && json.data.token);"
       ] } } ]
     },
     {
-      "name": "14 - Student Get Announcements",
+      "name": "12c - Student Create Experiment (should fail 403)",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/experiments", "host": ["{{baseUrl}}"], "path": ["api","experiments"] },
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"学生尝试创建的实验\",\n  \"description\": \"应当被权限拒绝\",\n  \"status\": \"DRAFT\",\n  \"startTime\": \"2030-01-01T00:00:00\",\n  \"endTime\": \"2030-12-31T23:59:59\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+  "pm.test('HTTP 403', function(){ pm.response.to.have.status(403); });"
+      ] } } ]
+    },
+    {
+      "name": "12d - Student Publish Experiment (should fail 403)",
+      "request": { "method": "PUT", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/experiments/{{experimentId}}/publish", "host":["{{baseUrl}}"], "path":["api","experiments","{{experimentId}}","publish"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 403', () => pm.response.code===403);"
+      ] } } ]
+    },
+    {
+      "name": "12e - Student Unpublish Experiment (should fail 403)",
+      "request": { "method": "PUT", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/experiments/{{experimentId}}/unpublish", "host":["{{baseUrl}}"], "path":["api","experiments","{{experimentId}}","unpublish"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 403', () => pm.response.code===403);"
+      ] } } ]
+    },
+    {
+      "name": "12f - Student Delete Experiment (should fail 403)",
+      "request": { "method": "DELETE", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/experiments/{{experimentId}}", "host":["{{baseUrl}}"], "path":["api","experiments","{{experimentId}}"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 403', () => pm.response.code===403);"
+      ] } } ]
+    },
+    {
+      "name": "12g - Student Update Experiment (should fail 403)",
+      "request": {
+        "method": "PUT",
+        "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/experiments/{{experimentId}}", "host":["{{baseUrl}}"], "path":["api","experiments","{{experimentId}}"] },
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"学生尝试编辑的实验\",\n  \"description\": \"应当被权限拒绝\",\n  \"status\": \"DRAFT\",\n  \"startTime\": \"2030-01-01T00:00:00\",\n  \"endTime\": \"2030-12-31T23:59:59\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 403', () => pm.response.code===403);"
+      ] } } ]
+    },
+    
+    {
+      "name": "13 - Student Get Announcements",
       "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/announcements", "host":["{{baseUrl}}"], "path":["api","announcements"] }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-        "pm.test('HTTP 200', () => pm.response.code===200);",
+  "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
         "const json = pm.response.json();",
         "pm.test('业务码 200', () => json && json.code === 200)"
       ] } } ]
@@ -475,7 +878,7 @@
         "body": { "mode": "raw", "raw": "{\n  \"title\": \"测试公告-已编辑\",\n  \"content\": \"这是一条由自动化测试修改后的公告\"\n}" }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-        "pm.test('HTTP 200', () => pm.response.code===200);",
+  "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
         "const json = pm.response.json();",
         "pm.test('业务码 200', () => json && json.code === 200);",
         "pm.test('更新返回同一ID', () => json && json.data && json.data.id === pm.collectionVariables.get('announcementId'));",
@@ -489,7 +892,7 @@
         "url": { "raw": "{{baseUrl}}/api/announcements", "host":["{{baseUrl}}"], "path":["api","announcements"] }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-        "pm.test('HTTP 200', () => pm.response.code===200);",
+  "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
         "let json=null; try{ json=pm.response.json(); }catch(e){};",
         "pm.test('业务码 200', () => json && json.code === 200);",
         "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
@@ -508,20 +911,176 @@
         "url": { "raw": "{{baseUrl}}/api/messages/receiver", "host":["{{baseUrl}}"], "path":["api","messages","receiver"] }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-        "pm.test('HTTP 200', () => pm.response.code===200);",
-        "const json = pm.response.json();",
-        "pm.test('业务码 200', () => json && json.code === 200)"
+  "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
+  "const json = pm.response.json();",
+  "pm.test('业务码 200', () => json && json.code === 200);",
+  "const list = (json && Array.isArray(json.data)) ? json.data : [];",
+  "const runId = pm.collectionVariables.get('runId');",
+  "const filtered = list.filter(m => m && typeof m.title==='string' && m.title.includes(runId));",
+        "pm.test('本次运行产生的消息共3条', () => filtered.length === 3);",
+  "const aname = pm.collectionVariables.get('adminUsername');",
+  "const tname = pm.collectionVariables.get('teacherUsername');",
+  "const senders = filtered.map(m => m.sender);",
+  "pm.test('发送者包含管理员', () => senders.includes(aname));",
+  "pm.test('发送者包含老师', () => senders.includes(tname));",
+  "const fromTeacher = filtered.find(m => m.sender===tname);",
+  "if(fromTeacher && fromTeacher.id){ pm.collectionVariables.set('messageIdFromTeacher', fromTeacher.id); }",
+  "pm.test('记录老师消息ID', () => !!pm.collectionVariables.get('messageIdFromTeacher'));"
       ] } } ]
     },
     {
-      "name": "16 - Student Get My Experiments",
+      "name": "14.1 - Student Get Message Senders",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages/senders", "host": ["{{baseUrl}}"], "path": ["api","messages","senders"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){};",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+        "const tname = pm.collectionVariables.get('teacherUsername');",
+        "const aname = pm.collectionVariables.get('adminUsername');",
+        "const hasTeacher = arr.some(s => s && (s.senderUsername===tname));",
+        "const hasAdmin = arr.some(s => s && (s.senderUsername===aname));",
+        "pm.test('发送者列表包含老师', () => hasTeacher);",
+        "pm.test('发送者列表包含管理员', () => hasAdmin);"
+      ] } } ]
+    },
+    {
+      "name": "14.2 - Student Get Messages From Teacher",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages/sender/{{teacherUsername}}", "host": ["{{baseUrl}}"], "path": ["api","messages","sender","{{teacherUsername}}"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){};",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+        "const runId = pm.collectionVariables.get('runId');",
+        "const mine = arr.filter(m => m && typeof m.title==='string' && m.title.includes(runId));",
+        "pm.test('老师本次发送的消息仅1条', () => mine.length===1);",
+        "if(mine[0] && mine[0].id){ pm.collectionVariables.set('messageIdFromTeacher', mine[0].id); }",
+        "pm.test('已记录老师消息ID', () => !!pm.collectionVariables.get('messageIdFromTeacher'));"
+      ] } } ]
+    },
+    {
+      "name": "14.3 - Student Mark Teacher Message Read",
+      "request": { "method": "PUT", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages/{{messageIdFromTeacher}}/read", "host": ["{{baseUrl}}"], "path": ["api","messages","{{messageIdFromTeacher}}","read"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "pm.test('消息状态为已读', () => json && json.data && json.data.status==='已读');"
+      ] } } ]
+    },
+    {
+      "name": "14.4 - Admin Get All Messages For This Run (expect 3)",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{authHeader}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages/all", "host": ["{{baseUrl}}"], "path": ["api","messages","all"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){};",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+        "const runId = pm.collectionVariables.get('runId');",
+        "const mine = arr.filter(m => m && typeof m.title==='string' && m.title.includes(runId));",
+        "pm.test('本次运行消息共3条(管理员视角)', () => mine.length===3);"
+      ] } } ]
+    },
+    {
+      "name": "14.5 - Admin Get Self Sent Messages (current role expect 1)",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{authHeader}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages/self/sent", "host": ["{{baseUrl}}"], "path": ["api","messages","self","sent"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){};",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+        "const runId = pm.collectionVariables.get('runId');",
+        "const mine = arr.filter(m => m && typeof m.title==='string' && m.title.includes(runId));",
+        "pm.test('以管理员当前权限发送的消息仅1条', () => mine.length===1);"
+      ] } } ]
+    },
+    {
+      "name": "14.6 - Admin Delete Assistant Message",
+      "request": { "method": "DELETE", "header": [ {"key":"Authorization","value":"{{authHeader}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages/{{assistantMessageId}}", "host": ["{{baseUrl}}"], "path": ["api","messages","{{assistantMessageId}}"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200/204/404', () => [200,204,404].includes(pm.response.code));"
+      ] } } ]
+    },
+    {
+      "name": "14.7 - Teacher Delete Own Message",
+      "request": { "method": "DELETE", "header": [ {"key":"Authorization","value":"{{teacherAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages/{{messageIdFromTeacher}}", "host": ["{{baseUrl}}"], "path": ["api","messages","{{messageIdFromTeacher}}"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200/204/404', () => [200,204,404].includes(pm.response.code));"
+      ] } } ]
+    },
+    {
+      "name": "14.8 - Student Get Messages (after deletions)",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages/receiver", "host":["{{baseUrl}}"], "path":["api","messages","receiver"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code === 200);",
+        "const list = (json && Array.isArray(json.data)) ? json.data : [];",
+        "const runId = pm.collectionVariables.get('runId');",
+        "const filtered = list.filter(m => m && typeof m.title==='string' && m.title.includes(runId));",
+        "pm.test('删除后本次运行消息数量减少(<=1)', () => filtered.length <= 1);"
+      ] } } ]
+    },
+    {
+      "name": "14.9 - Student Get Message Senders (after deletions)",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages/senders", "host": ["{{baseUrl}}"], "path": ["api","messages","senders"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){};",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+        "const tname = pm.collectionVariables.get('teacherUsername');",
+        "const aname = pm.collectionVariables.get('adminUsername');",
+        "const hasTeacher = arr.some(s => s && (s.senderUsername===tname));",
+        "const hasAdmin = arr.some(s => s && (s.senderUsername===aname));",
+        "pm.test('删除后发送者集合应减少(老师或管理员至少有一方可能不在)', () => !(hasTeacher && hasAdmin));"
+      ] } } ]
+    },
+    {
+      "name": "15a - Student Get My Experiments (should not include unassigned draft)",
       "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/student/experiments", "host":["{{baseUrl}}"], "path":["api","student","experiments"] }
       },
       "event": [ { "listen": "test", "script": { "exec": [
         "pm.test('HTTP 200', () => pm.response.code===200);",
-        "const json = pm.response.json();",
-        "pm.test('业务码 200', () => json && json.code === 200)"
+        "let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);",
+        "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+        "const eid = pm.collectionVariables.get('experimentIdUnassigned');",
+        "const contains = arr.some(it => it && it.id===eid);",
+        "pm.test('学生实验列表不包含未发布且未分配的实验', () => contains===false);"
+      ] } } ]
+    },
+    {
+      "name": "15a.1 - Student Get Experiment Details",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/student/experiments/{{experimentId}}", "host":["{{baseUrl}}"], "path":["api","student","experiments","{{experimentId}}"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);",
+        "pm.test('实验ID匹配', () => json && json.data && json.data.id===pm.collectionVariables.get('experimentId'));",
+        "const expectedName = pm.collectionVariables.get('experimentNameAfter');",
+        "if(expectedName){ pm.test('名称为老师更新后的名称', () => json && json.data && json.data.name===expectedName); }",
+        "if(json && json.data && json.data.status){ pm.test('状态为PUBLISHED', () => json.data.status==='PUBLISHED'); }"
       ] } } ]
     },
     {
@@ -530,13 +1089,108 @@
         "url": { "raw": "{{baseUrl}}/api/student/experiments/tasks", "host":["{{baseUrl}}"], "path":["api","student","experiments","tasks"] }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-        "pm.test('HTTP 200', () => pm.response.code===200);",
+  "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
         "let json=null; try{ json=pm.response.json(); }catch(e){}",
         "pm.test('业务码 200', () => json && json.code === 200)"
       ] } } ]
     },
     {
-      "name": "17 - Student Create Discussion",
+      "name": "15c - Student Get Task Details With Questions (expect 2 after deletion)",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/student/experiments/tasks/{{taskId}}", "host":["{{baseUrl}}"], "path":["api","student","experiments","tasks","{{taskId}}"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json(); pm.test('业务码 200', () => json && json.code===200);",
+        "const q = json && json.data && json.data.question;",
+        "pm.test('返回题目数组', () => Array.isArray(q));",
+        "pm.test('删除一题后剩余2题', () => Array.isArray(q) && q.length===2);",
+        "const contents = (q||[]).map(it => it && it.content || '');",
+        "pm.test('内容包含唯一标记', () => contents.every(c => typeof c==='string' && c.includes(pm.collectionVariables.get('uniqueToken'))));",
+        "pm.test('包含已更新题面', () => contents.some(c => c.includes('已更新')));",
+        "const ids = (q||[]).map(it => it && it.id).filter(Boolean);",
+        "pm.test('包含q1与q2', () => ids.includes(pm.collectionVariables.get('q1Id')) && ids.includes(pm.collectionVariables.get('q2Id')));",
+        "pm.test('不包含已删除的q3', () => !ids.includes(pm.collectionVariables.get('q3Id')));"
+      ] } } ]
+    },
+    {
+      "name": "15d - Student Update Question After Viewing (should fail 403)",
+      "request": {
+        "method": "PUT",
+        "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/questions/{{q1Id}}", "host": ["{{baseUrl}}"], "path": ["api","questions","{{q1Id}}"] },
+        "body": { "mode": "raw", "raw": "{\n  \"questionType\": \"SINGLE_CHOICE\",\n  \"content\": \"学生查看后尝试编辑-应被拒绝\",\n  \"options\": [\"A\", \"B\"],\n  \"answer\": \"A\",\n  \"explanation\": \"无\",\n  \"tags\": \"deny,test\",\n  \"score\": 1\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 403', () => pm.response.code===403);"
+      ] } } ]
+    },
+    {
+      "name": "15e0 - Student Submit Task1 Answer (one wrong)",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/student/experiments/tasks/submit", "host":["{{baseUrl}}"], "path":["api","student","experiments","tasks","submit"] },
+        "body": { "mode": "raw", "raw": "{\n  \"taskId\": \"{{taskId}}\",\n  \"experimentId\": \"{{experimentId}}\",\n  \"userAnswer\": { \"{{q1Id}}\": \"A\", \"{{q2Id}}\": \"B\" }\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200/201', () => [200,201].includes(pm.response.code));",
+        "let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);",
+        "pm.test('返回提交ID(错误提交)', () => json && json.data && json.data.id);"
+      ] } } ]
+    },
+    {
+      "name": "15f0 - Student Get Task1 Evaluation Result (after wrong)",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/student/experiments/tasks/{{taskId}}/result", "host":["{{baseUrl}}"], "path":["api","student","experiments","tasks","{{taskId}}","result"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);",
+        "pm.test('评测包含taskId(错误提交)', () => json && json.data && json.data.taskId===pm.collectionVariables.get('taskId'));",
+        "if(json && json.data && json.data.score!=null){ const s=Number(json.data.score); pm.test('分数约为50(2题错1题)', () => s>=49.9 && s<=50.1); }"
+      ] } } ]
+    },
+    {
+      "name": "15e - Student Submit Task1 Answer",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/student/experiments/tasks/submit", "host":["{{baseUrl}}"], "path":["api","student","experiments","tasks","submit"] },
+        "body": { "mode": "raw", "raw": "{\n  \"taskId\": \"{{taskId}}\",\n  \"experimentId\": \"{{experimentId}}\",\n  \"userAnswer\": { \"{{q1Id}}\": \"B\", \"{{q2Id}}\": \"B\" }\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200/201', () => [200,201].includes(pm.response.code));",
+        "let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);",
+        "pm.test('返回提交ID', () => json && json.data && json.data.id);"
+      ] } } ]
+    },
+    {
+      "name": "15f - Student Get Task1 Evaluation Result",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/student/experiments/tasks/{{taskId}}/result", "host":["{{baseUrl}}"], "path":["api","student","experiments","tasks","{{taskId}}","result"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);",
+        "pm.test('评测包含taskId', () => json && json.data && json.data.taskId===pm.collectionVariables.get('taskId'));",
+        "if(json && json.data && json.data.score!=null){ pm.test('有评分', () => true); }"
+      ] } } ]
+    },
+    {
+      "name": "15g - Student Get Task1 Evaluation History",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/student/experiments/tasks/{{taskId}}/history", "host":["{{baseUrl}}"], "path":["api","student","experiments","tasks","{{taskId}}","history"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);",
+        "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+        "pm.test('历史记录至少一条', () => arr.length >= 1);"
+      ] } } ]
+    },
+    {
+      "name": "16 - Student Create Discussion",
       "request": { "method": "POST", "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{studentAuth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/discussions", "host":["{{baseUrl}}"], "path":["api","discussions"] },
         "body": { "mode": "raw", "raw": "{\n  \"title\": \"关于自动化实验的讨论\",\n  \"content\": \"这是学生就分配的实验发起的讨论。\",\n  \"richContent\": { \"html\": \"<p>这是更丰富的讨论内容</p>\", \"delta\": {} },\n  \"tags\": [\"实验\", \"讨论\"],\n  \"experimentId\": \"{{experimentId}}\"\n}" }
@@ -544,7 +1198,7 @@
       "event": [ { "listen": "test", "script": { "exec": [
         "const json = pm.response.json();",
   "if (json && json.data && json.data.id) pm.collectionVariables.set('discussionId', json.data.id);",
-  "pm.test('HTTP 200/201', () => [200,201].includes(pm.response.code));",
+  "pm.test('HTTP 200/201', function(){ pm.expect([200,201]).to.include(pm.response.code); });",
   "pm.test('业务码 200', () => json && json.code === 200);",
   "pm.test('返回 discussionId', () => json && json.data && json.data.id)"
       ] } } ]
@@ -557,7 +1211,7 @@
       "event": [ { "listen": "test", "script": { "exec": [
   "pm.test('HTTP 200', () => pm.response.code===200);",
   "let json=null; try{ json=pm.response.json(); }catch(e){}",
-  "pm.test('业务码 200', () => json && json.code === 200);",
+  "pm.test('业务码 200', () => json && json.code===200);",
   "const payload = json && json.data;",
   "let items = []; if(payload){ if(Array.isArray(payload.items)) items=payload.items; else if(Array.isArray(payload.list)) items=payload.list; }",
         "const did = pm.collectionVariables.get('discussionId');",
@@ -573,7 +1227,7 @@
       "event": [ { "listen": "test", "script": { "exec": [
   "pm.test('HTTP 200', () => pm.response.code===200);",
   "let json=null; try{ json=pm.response.json(); }catch(e){}",
-  "pm.test('业务码 200', () => json && json.code === 200);",
+  "pm.test('业务码 200', () => json && json.code===200);",
   "const payload = json && json.data;",
   "let items = []; if(payload){ if(Array.isArray(payload.items)) items=payload.items; else if(Array.isArray(payload.list)) items=payload.list; }",
         "const did = pm.collectionVariables.get('discussionId');",
@@ -588,7 +1242,7 @@
         "body": { "mode":"raw", "raw": "{\n  \"status\": \"APPROVED\"\n}" }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-        "pm.test('HTTP 200', () => pm.response.code===200);",
+  "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
         "const json = pm.response.json();",
         "pm.test('业务码 200', () => json && json.code===200);"
       ] } } ]
@@ -599,7 +1253,7 @@
         "url": { "raw": "{{baseUrl}}/api/discussions?experimentId={{experimentId}}&page=0&size=10", "host":["{{baseUrl}}"], "path":["api","discussions"], "query":[{"key":"experimentId","value":"{{experimentId}}"},{"key":"page","value":"0"},{"key":"size","value":"10"}] }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-  "pm.test('HTTP 200', () => pm.response.code===200);",
+  "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
   "let json=null; try{ json=pm.response.json(); }catch(e){}",
   "pm.test('业务码 200', () => json && json.code === 200);",
   "const payload = json && json.data; let items = []; if(payload){ if(Array.isArray(payload.items)) items=payload.items; else if(Array.isArray(payload.list)) items=payload.list; }",
@@ -658,7 +1312,7 @@
       "event": [ { "listen": "test", "script": { "exec": [
         "pm.test('HTTP 200', () => pm.response.code===200);",
         "let json=null; try{ json=pm.response.json(); }catch(e){}",
-        "pm.test('业务码 200', () => json && json.code === 200);",
+        "pm.test('业务码 200', () => json && json.code===200);",
         "const payload = json && json.data; let items = []; if(payload){ if(Array.isArray(payload.items)) items=payload.items; else if(Array.isArray(payload.list)) items=payload.list; }",
         "const did = pm.collectionVariables.get('discussionId');",
         "const target = items.find(it => it && (it.id===did));",
@@ -750,10 +1404,10 @@
       "name": "17.12 - Student1 Reply to Student2 Reply",
       "request": { "method": "POST", "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{studentAuth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/discussions/{{discussionId}}/comments", "host":["{{baseUrl}}"], "path":["api","discussions","{{discussionId}}","comments"] },
-        "body": { "mode":"raw", "raw": "{\n  \"content\": \"学生1对学生2回复的回复\",\n  \"parentId\": \"{{commentId}}\"\n}" }
+        "body": { "mode": "raw", "raw": "{\n  \"content\": \"学生1对学生2回复的回复\",\n  \"parentId\": \"{{commentId}}\"\n}" }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-        "const json = pm.response.json(); pm.test('HTTP 200', () => pm.response.code===200); pm.test('业务码 200', () => json && json.code===200);",
+  "const json = pm.response.json(); pm.test('HTTP 200', function(){ pm.response.to.have.status(200); }); pm.test('业务码 200', () => json && json.code===200);",
         "if(json && json.data && json.data.id){ pm.collectionVariables.set('replyCommentId', json.data.id); }",
         "pm.test('拿到 replyCommentId', () => !!pm.collectionVariables.get('replyCommentId'));"
       ] } } ]
@@ -764,7 +1418,7 @@
         "url": { "raw": "{{baseUrl}}/api/comments/{{commentId}}/replies?page=0&size=10", "host":["{{baseUrl}}"], "path":["api","comments","{{commentId}}","replies"], "query":[{"key":"page","value":"0"},{"key":"size","value":"10"}] }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-  "pm.test('HTTP 200', () => pm.response.code===200); let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);",
+  "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); }); let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);",
   "const payload = json && json.data; let items = []; if(payload){ if(Array.isArray(payload.items)) items=payload.items; else if(Array.isArray(payload.list)) items=payload.list; }",
   "const rid = pm.collectionVariables.get('replyCommentId'); const found = items.some(it => it && (it.id===rid)); pm.test('学生2能看到学生1的回复', () => found);"
       ] } } ]
@@ -776,7 +1430,7 @@
         "body": { "mode":"raw", "raw": "{\n  \"reason\": \"INAPPROPRIATE\",\n  \"details\": \"测试举报\"\n}" }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-        "pm.test('HTTP 200', () => pm.response.code===200); let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);"
+  "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); }); let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);"
       ] } } ]
     },
     {
@@ -785,7 +1439,7 @@
         "url": { "raw": "{{baseUrl}}/api/comments/{{replyCommentId}}", "host":["{{baseUrl}}"], "path":["api","comments","{{replyCommentId}}"] }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-        "pm.test('HTTP 403', () => pm.response.code===403);"
+  "pm.test('HTTP 403', function(){ pm.response.to.have.status(403); });"
       ] } } ]
     },
     {
@@ -794,8 +1448,483 @@
         "url": { "raw": "{{baseUrl}}/api/comments/{{replyCommentId}}", "host":["{{baseUrl}}"], "path":["api","comments","{{replyCommentId}}"] }
       },
       "event": [ { "listen": "test", "script": { "exec": [
-        "pm.test('HTTP 200/204', () => [200,204].includes(pm.response.code));"
+  "pm.test('HTTP 200/204', function(){ pm.expect([200,204]).to.include(pm.response.code); });"
       ] } } ]
+    },
+    {
+      "name": "17 - Teacher Search Questions By Unique Token",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{teacherAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/questions/search?keyword={{uniqueToken}}", "host":["{{baseUrl}}"], "path":["api","questions","search"], "query":[{"key":"keyword","value":"{{uniqueToken}}"}] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);",
+        "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+        "pm.test('至少返回两道题', () => arr.length >= 2);",
+        "const ids = arr.map(it => it && it.id).filter(Boolean);",
+        "pm.test('搜索命中q1与q2', () => ids.includes(pm.collectionVariables.get('q1Id')) && ids.includes(pm.collectionVariables.get('q2Id')));",
+        "pm.test('不包含已删除的q3', () => !ids.includes(pm.collectionVariables.get('q3Id')));"
+      ] } } ]
+    },
+    {
+      "name": "18.1 - Teacher Upload Resource (Valid)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "{{teacherAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/upload",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "upload"]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": [],
+              "value": "测试资源内容-{{runId}}"
+            },
+            {
+              "key": "experimentId",
+              "value": "{{experimentId}}"
+            },
+            {
+              "key": "taskId", 
+              "value": "{{taskId}}"
+            },
+            {
+              "key": "description",
+              "value": "自动化测试上传的资源文件"
+            },
+            {
+              "key": "uploadType",
+              "value": "resource"
+            },
+            {
+              "key": "autoExtract",
+              "value": "false"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.code===200);",
+              "const json = pm.response.json();",
+              "pm.test('业务码 200', () => json && json.code===200);",
+              "if(json && json.data && json.data.id){ pm.collectionVariables.set('resourceId', json.data.id); }",
+              "pm.test('拿到 resourceId', () => !!pm.collectionVariables.get('resourceId'));",
+              "pm.test('返回正确的实验ID', () => json && json.data && json.data.experimentId===pm.collectionVariables.get('experimentId'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.2 - Student Upload Resource (should fail 403)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "{{studentAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/upload",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "upload"]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file", 
+              "src": [],
+              "value": "学生尝试上传的文件"
+            },
+            {
+              "key": "experimentId",
+              "value": "{{experimentId}}"
+            },
+            {
+              "key": "taskId",
+              "value": "{{taskId}}"
+            },
+            {
+              "key": "description", 
+              "value": "学生不应有权限上传"
+            },
+            {
+              "key": "uploadType",
+              "value": "resource"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.code===403);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.3 - Admin Get All Resources",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "{{authHeader}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.code===200);",
+              "const json = pm.response.json();",
+              "pm.test('业务码 200', () => json && json.code===200);",
+              "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+              "const rid = pm.collectionVariables.get('resourceId');",
+              "const found = arr.some(r => r && r.id===rid);",
+              "pm.test('管理员能看到刚上传的资源', () => found);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.4 - Teacher Get Experiment Resources",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "{{teacherAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/experiments/{{experimentId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "experiments", "{{experimentId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.code===200);",
+              "const json = pm.response.json();",
+              "pm.test('业务码 200', () => json && json.code===200);",
+              "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+              "const rid = pm.collectionVariables.get('resourceId');",
+              "const found = arr.some(r => r && r.id===rid);",
+              "pm.test('教师能看到自己实验的资源', () => found);",
+              "pm.test('所有资源都属于该实验', () => arr.every(r => r && r.experimentId===pm.collectionVariables.get('experimentId')));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.5 - Student Get Experiment Resources (accessible experiment)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "{{studentAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/experiments/{{experimentId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "experiments", "{{experimentId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.code===200);",
+              "const json = pm.response.json();",
+              "pm.test('业务码 200', () => json && json.code===200);",
+              "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+              "const rid = pm.collectionVariables.get('resourceId');",
+              "const found = arr.some(r => r && r.id===rid);",
+              "pm.test('学生能看到分配实验的资源', () => found);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.6 - Get Resource Details",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "{{teacherAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/{{resourceId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "{{resourceId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.code===200);",
+              "const json = pm.response.json();",
+              "pm.test('业务码 200', () => json && json.code===200);",
+              "pm.test('返回正确的资源ID', () => json && json.data && json.data.id===pm.collectionVariables.get('resourceId'));",
+              "pm.test('资源属于正确的实验', () => json && json.data && json.data.experimentId===pm.collectionVariables.get('experimentId'));",
+              "if(json && json.data){ pm.collectionVariables.set('resourceFileName', json.data.fileName || ''); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.7 - Teacher Update Resource Info",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "{{teacherAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/{{resourceId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "{{resourceId}}"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"experimentId\": \"{{experimentId}}\",\n  \"taskId\": \"{{taskId}}\",\n  \"description\": \"更新后的资源描述-{{runId}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.code===200);",
+              "const json = pm.response.json();",
+              "pm.test('业务码 200', () => json && json.code===200);",
+              "pm.test('返回同一资源ID', () => json && json.data && json.data.id===pm.collectionVariables.get('resourceId'));",
+              "const runId = pm.collectionVariables.get('runId');",
+              "pm.test('描述已更新', () => json && json.data && json.data.description && json.data.description.includes(runId));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.8 - Admin(Teacher role) Update Other's Resource (should fail 403)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "{{adminTeacherAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/{{resourceId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "{{resourceId}}"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"experimentId\": \"{{experimentId}}\",\n  \"description\": \"管理员(教师身份)尝试修改-应禁止\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.code===403);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.9 - Download Resource File",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "{{studentAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/{{resourceId}}/download",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "{{resourceId}}", "download"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.code===200);",
+              "pm.test('返回文件内容', () => pm.response.responseSize > 0);",
+              "const contentDisposition = pm.response.headers.get('Content-Disposition');",
+              "pm.test('包含文件下载头', () => contentDisposition && contentDisposition.includes('attachment'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.10 - Teacher Upload Second Resource",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "{{teacherAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/upload",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "upload"]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": [],
+              "value": "第二个测试资源-{{runId}}"
+            },
+            {
+              "key": "experimentId",
+              "value": "{{experimentId}}"
+            },
+            {
+              "key": "taskId",
+              "value": "{{taskId}}"
+            },
+            {
+              "key": "description",
+              "value": "用于删除测试的资源"
+            },
+            {
+              "key": "uploadType",
+              "value": "resource"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.code===200);",
+              "const json = pm.response.json();",
+              "pm.test('业务码 200', () => json && json.code===200);",
+              "if(json && json.data && json.data.id){ pm.collectionVariables.set('resourceId2', json.data.id); }",
+              "pm.test('拿到 resourceId2', () => !!pm.collectionVariables.get('resourceId2'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.11 - Student Delete Resource (should fail 403)",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "{{studentAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/{{resourceId2}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "{{resourceId2}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.code===403);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.12 - Teacher Delete Own Resource",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "{{teacherAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/{{resourceId2}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "{{resourceId2}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.code===200);",
+              "const json = pm.response.json();",
+              "pm.test('业务码 200', () => json && json.code===200);",
+              "pm.collectionVariables.unset('resourceId2');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.13 - Verify Resources After Deletion",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "{{teacherAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/experiments/{{experimentId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "experiments", "{{experimentId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.code===200);",
+              "const json = pm.response.json();",
+              "pm.test('业务码 200', () => json && json.code===200);",
+              "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+              "const rid1 = pm.collectionVariables.get('resourceId');",
+              "const rid2 = pm.collectionVariables.get('resourceId2');",
+              "const has1 = arr.some(r => r && r.id===rid1);",
+              "const has2 = arr.some(r => r && r.id===rid2);",
+              "pm.test('第一个资源仍存在', () => has1);",
+              "pm.test('第二个资源已删除', () => !has2);"
+            ]
+          }
+        }
+      ]
     }
   ]
 }

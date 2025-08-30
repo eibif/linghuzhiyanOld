@@ -502,12 +502,14 @@ public class UserServiceImpl implements UserService {
         Set<String> currentUserRoles = getUserRoleIds(currentUser.getId());
 
         if (!canAssignRole(currentUserRoles, roleId)) {
-            throw new RuntimeException("权限不足：无法分配该角色");
+            // 权限不足，保持语义清晰
+            throw new org.springframework.security.access.AccessDeniedException("权限不足：无法分配该角色");
         }
 
         Set<String> targetUserRoles = getUserRoleIds(userId);
+        // 若用户已拥有该角色，则抛出业务异常（与权限不足403区分）
         if (targetUserRoles.contains(roleId)) {
-            throw new RuntimeException("用户已拥有该角色");
+            throw UserException.roleAlreadyAssigned();
         }
 
         assignRoleToUser(userId, roleId);

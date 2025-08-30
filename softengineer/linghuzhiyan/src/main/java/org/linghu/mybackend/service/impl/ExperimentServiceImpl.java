@@ -15,6 +15,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -88,7 +91,8 @@ public class ExperimentServiceImpl implements ExperimentService {
                 .orElseThrow(() -> new RuntimeException("用户不存在"));
         // 检查权限（仅创建者可以更新）
         if (!experiment.getCreatorId().equals(user.getId())) {
-            throw new RuntimeException("无权限更新此实验");
+            // 抛出权限异常，交由全局异常处理转为 403
+            throw new AccessDeniedException("无权更新此实验");
         }
         experiment.setName(requestDTO.getName());
         experiment.setDescription(requestDTO.getDescription());
@@ -130,7 +134,17 @@ public class ExperimentServiceImpl implements ExperimentService {
     public ExperimentDTO publishExperiment(String id) {
         Experiment experiment = experimentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("实验不存在"));
+        // 仅创建者可以发布：从安全上下文获取当前用户
 
+        String username = getCurrentUsernameFromSecurityContext();
+        if (username == null || "anonymousUser".equals(username)) {
+            throw new AccessDeniedException("未认证或权限不足：无权发布此实验");
+        }
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("用户不存在"));
+        if (!experiment.getCreatorId().equals(user.getId())) {
+            throw new AccessDeniedException("权限不足：无权发布此实验");
+        }
         experiment.setStatus(Experiment.ExperimentStatus.PUBLISHED);
         Experiment publishedExperiment = experimentRepository.save(experiment);
 
@@ -144,7 +158,15 @@ public class ExperimentServiceImpl implements ExperimentService {
     public ExperimentDTO unpublishExperiment(String id) {
         Experiment experiment = experimentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("实验不存在"));
-
+        String username =getCurrentUsernameFromSecurityContext();
+        if (username == null || "anonymousUser".equals(username)) {
+            throw new AccessDeniedException("未认证或权限不足：无权取消发布此实验");
+        }
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("用户不存在"));
+        if (!experiment.getCreatorId().equals(user.getId())) {
+            throw new AccessDeniedException("权限不足：无权取消发布此实验");
+        }
         experiment.setStatus(Experiment.ExperimentStatus.DRAFT);
         Experiment unpublishedExperiment = experimentRepository.save(experiment);
 
@@ -167,5 +189,14 @@ public class ExperimentServiceImpl implements ExperimentService {
         dto.setStartTime(experiment.getStartTime());
         dto.setEndTime(experiment.getEndTime());
         return dto;
+    }
+    /**
+     * 获取当前认证用户的用户名
+     *
+     * @return 当前用户名，若未认证则返回null
+     */
+    protected String getCurrentUsernameFromSecurityContext() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return (auth != null) ? auth.getName() : null;
     }
 }

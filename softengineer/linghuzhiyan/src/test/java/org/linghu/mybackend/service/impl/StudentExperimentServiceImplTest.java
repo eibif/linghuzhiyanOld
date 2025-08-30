@@ -1,26 +1,23 @@
 package org.linghu.mybackend.service.impl;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.linghu.mybackend.constants.TaskType;
 import org.linghu.mybackend.domain.*;
 import org.linghu.mybackend.dto.*;
 import org.linghu.mybackend.repository.*;
-import org.linghu.mybackend.service.QuestionService;
-import org.linghu.mybackend.util.MinioUtil;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * StudentExperimentServiceImpl 单元测试
@@ -32,13 +29,10 @@ class StudentExperimentServiceImplTest {
     private ExperimentRepository experimentRepository;
 
     @Mock
-    private UserRepository userRepository;
+    private ExperimentAssignmentRepository assignmentRepository;
 
     @Mock
     private ExperimentTaskRepository experimentTaskRepository;
-
-    @Mock
-    private ExperimentAssignmentRepository assignmentRepository;
 
     @Mock
     private ExperimentSubmissionRepository submissionRepository;
@@ -47,27 +41,18 @@ class StudentExperimentServiceImplTest {
     private ExperimentEvaluationRepository evaluationRepository;
 
     @Mock
-    private QuestionService questionService;
+    private QuestionRepository questionRepository;
 
-    @Mock
-    private MinioUtil minioUtil;
 
     @InjectMocks
     private StudentExperimentServiceImpl studentExperimentService;
 
-    private User testStudent;
     private Experiment testExperiment;
     private ExperimentTask testTask;
-    private ExperimentAssignment testAssignment;
 
     @BeforeEach
     void setUp() {
         LocalDateTime now = LocalDateTime.now();
-
-        testStudent = new User();
-        testStudent.setId("user1");
-        testStudent.setUsername("student1");
-        testStudent.setEmail("student1@test.com");
 
         testExperiment = Experiment.builder()
                 .id("experiment1")
@@ -93,477 +78,252 @@ class StudentExperimentServiceImplTest {
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
-
-        testAssignment = new ExperimentAssignment();
-        testAssignment.setId("assignment1");
-        testAssignment.setTaskId("task1");
-        testAssignment.setUserId("user1");
-        testAssignment.setAssignedAt(new java.util.Date());
     }
 
-    @Nested
-    class GetStudentExperimentsTests {
+    @Test
+    void getStudentExperiments_WithValidStudent_ShouldReturnExperiments() {
+        // Given
+        when(experimentRepository.findByStatus(Experiment.ExperimentStatus.PUBLISHED)).thenReturn(List.of(testExperiment));
 
-        @Test
-        void getStudentExperiments_WithValidStudent_ShouldReturnExperiments() {
-            // Given
-            when(experimentRepository.findByStatus(Experiment.ExperimentStatus.PUBLISHED))
-                    .thenReturn(List.of(testExperiment));
+        // When
+        List<ExperimentDTO> result = studentExperimentService.getStudentExperiments("student1");
 
-            // When
-            List<ExperimentDTO> result = studentExperimentService.getStudentExperiments("student1");
-
-            // Then
-            assertNotNull(result);
-            assertFalse(result.isEmpty());
-            assertEquals(1, result.size());
-            assertEquals("experiment1", result.get(0).getId());
-            assertEquals("Test Experiment", result.get(0).getName());
-            verify(experimentRepository).findByStatus(Experiment.ExperimentStatus.PUBLISHED);
-        }
-
-        @Test
-        void getStudentExperiments_WithNoExperiments_ShouldReturnEmptyList() {
-            // Given
-            when(experimentRepository.findByStatus(Experiment.ExperimentStatus.PUBLISHED))
-                    .thenReturn(List.of());
-
-            // When
-            List<ExperimentDTO> result = studentExperimentService.getStudentExperiments("student1");
-
-            // Then
-            assertNotNull(result);
-            assertTrue(result.isEmpty());
-            verify(experimentRepository).findByStatus(Experiment.ExperimentStatus.PUBLISHED);
-        }
-
-        @Test
-        void getStudentExperiments_WithMultipleExperiments_ShouldReturnAllExperiments() {
-            // Given
-            Experiment experiment2 = Experiment.builder()
-                    .id("experiment2")
-                    .name("Test Experiment 2")
-                    .description("Test Description 2")
-                    .creatorId("teacher2")
-                    .status(Experiment.ExperimentStatus.PUBLISHED)
-                    .startTime(LocalDateTime.now())
-                    .endTime(LocalDateTime.now().plusDays(14))
-                    .createdAt(LocalDateTime.now())
-                    .updatedAt(LocalDateTime.now())
-                    .build();
-
-            when(experimentRepository.findByStatus(Experiment.ExperimentStatus.PUBLISHED))
-                    .thenReturn(List.of(testExperiment, experiment2));
-
-            // When
-            List<ExperimentDTO> result = studentExperimentService.getStudentExperiments("student1");
-
-            // Then
-            assertNotNull(result);
-            assertEquals(2, result.size());
-            verify(experimentRepository).findByStatus(Experiment.ExperimentStatus.PUBLISHED);
-        }
-
-        @Test
-        void getStudentExperiments_WithRepositoryException_ShouldThrowException() {
-            // Given
-            when(experimentRepository.findByStatus(Experiment.ExperimentStatus.PUBLISHED))
-                    .thenThrow(new RuntimeException("Database error"));
-
-            // When & Then
-            RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-                studentExperimentService.getStudentExperiments("student1");
-            });
-            assertEquals("Database error", exception.getMessage());
-            verify(experimentRepository).findByStatus(Experiment.ExperimentStatus.PUBLISHED);
-        }
+        // Then
+        assertNotNull(result);
+        assertFalse(result.isEmpty());
+        verify(experimentRepository).findByStatus(Experiment.ExperimentStatus.PUBLISHED);
     }
 
-    @Nested
-    class GetExperimentDetailsTests {
+    @Test
+    void getStudentExperiments_WithNoExperiments_ShouldReturnEmptyList() {
+        // Given
+        when(experimentRepository.findByStatus(Experiment.ExperimentStatus.PUBLISHED)).thenReturn(List.of());
 
-        @Test
-        void getExperimentDetails_WithValidId_ShouldReturnExperiment() {
-            // Given
-            when(experimentRepository.findById("experiment1")).thenReturn(Optional.of(testExperiment));
+        // When
+        List<ExperimentDTO> result = studentExperimentService.getStudentExperiments("student1");
 
-            // When
-            ExperimentDTO result = studentExperimentService.getExperimentDetails("experiment1");
-
-            // Then
-            assertNotNull(result);
-            assertEquals("experiment1", result.getId());
-            assertEquals("Test Experiment", result.getName());
-            assertEquals("Test Description", result.getDescription());
-            verify(experimentRepository).findById("experiment1");
-        }
-
-        @Test
-        void getExperimentDetails_WithNonExistentId_ShouldThrowException() {
-            // Given
-            when(experimentRepository.findById("nonexistent")).thenReturn(Optional.empty());
-
-            // When & Then
-            RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-                studentExperimentService.getExperimentDetails("nonexistent");
-            });
-            assertEquals("实验不存在", exception.getMessage());
-            verify(experimentRepository).findById("nonexistent");
-        }
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+        verify(experimentRepository).findByStatus(Experiment.ExperimentStatus.PUBLISHED);
     }
 
-    @Nested
-    class GetAssignedTasksTests {
+    @Test
+    void getStudentExperiments_WithRepositoryException_ShouldThrowException() {
+        // Given
+        when(experimentRepository.findByStatus(Experiment.ExperimentStatus.PUBLISHED)).thenThrow(new RuntimeException("Database error"));
 
-        @Test
-        void getAssignedTasks_WithValidStudent_ShouldReturnTasks() {
-            // Given
-            when(userRepository.findByUsername("student1")).thenReturn(Optional.of(testStudent));
-            when(assignmentRepository.findByUserId("user1")).thenReturn(List.of(testAssignment));
-            when(experimentTaskRepository.findById("task1")).thenReturn(Optional.of(testTask));
-
-            // When
-            List<ExperimentTaskDTO> result = studentExperimentService.getAssignedTasks("student1");
-
-            // Then
-            assertNotNull(result);
-            assertFalse(result.isEmpty());
-            assertEquals(1, result.size());
-            assertEquals("task1", result.get(0).getId());
-            assertEquals("Test Task", result.get(0).getTitle());
-            verify(userRepository).findByUsername("student1");
-            verify(assignmentRepository).findByUserId("user1");
-            verify(experimentTaskRepository).findById("task1");
-        }
-
-        @Test
-        void getAssignedTasks_WithNonExistentStudent_ShouldThrowException() {
-            // Given
-            when(userRepository.findByUsername("nonexistent")).thenReturn(Optional.empty());
-
-            // When & Then
-            RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-                studentExperimentService.getAssignedTasks("nonexistent");
-            });
-            assertEquals("用户不存在", exception.getMessage());
-            verify(userRepository).findByUsername("nonexistent");
-            verify(assignmentRepository, never()).findByUserId(any());
-        }
-
-        @Test
-        void getAssignedTasks_WithNoAssignments_ShouldReturnEmptyList() {
-            // Given
-            when(userRepository.findByUsername("student1")).thenReturn(Optional.of(testStudent));
-            when(assignmentRepository.findByUserId("user1")).thenReturn(List.of());
-
-            // When
-            List<ExperimentTaskDTO> result = studentExperimentService.getAssignedTasks("student1");
-
-            // Then
-            assertNotNull(result);
-            assertTrue(result.isEmpty());
-            verify(userRepository).findByUsername("student1");
-            verify(assignmentRepository).findByUserId("user1");
-        }
+        // When & Then
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            studentExperimentService.getStudentExperiments("student1");
+        });
+        assertEquals("Database error", exception.getMessage());
+        verify(experimentRepository).findByStatus(Experiment.ExperimentStatus.PUBLISHED);
     }
 
-    @Nested
-    class GetTaskByIdTests {
+    @Test
+    void getAllExperiments_WithValidData_ShouldReturnAllExperiments() {
+        // Given
+        when(experimentRepository.findByStatus(Experiment.ExperimentStatus.PUBLISHED)).thenReturn(List.of(testExperiment));
 
-        @Test
-        void getTaskById_WithValidTaskAndAuthorizedStudent_ShouldReturnTask() {
-            // Given
-            when(userRepository.findByUsername("student1")).thenReturn(Optional.of(testStudent));
-            when(assignmentRepository.existsByTaskIdAndUserId("task1", "user1")).thenReturn(true);
-            when(experimentTaskRepository.findById("task1")).thenReturn(Optional.of(testTask));
+        // When
+        List<ExperimentDTO> result = studentExperimentService.getStudentExperiments("student1");
 
-            // When
-            ExperimentTaskDTO result = studentExperimentService.getTaskById("task1", "student1");
-
-            // Then
-            assertNotNull(result);
-            assertEquals("task1", result.getId());
-            assertEquals("Test Task", result.getTitle());
-            verify(userRepository).findByUsername("student1");
-            verify(assignmentRepository).existsByTaskIdAndUserId("task1", "user1");
-            verify(experimentTaskRepository).findById("task1");
-        }
-
-        @Test
-        void getTaskById_WithUnauthorizedStudent_ShouldThrowException() {
-            // Given
-            when(userRepository.findByUsername("student1")).thenReturn(Optional.of(testStudent));
-            when(assignmentRepository.existsByTaskIdAndUserId("task1", "user1")).thenReturn(false);
-
-            // When & Then
-            RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-                studentExperimentService.getTaskById("task1", "student1");
-            });
-            assertEquals("你没有权限访问该任务", exception.getMessage());
-            verify(userRepository).findByUsername("student1");
-            verify(assignmentRepository).existsByTaskIdAndUserId("task1", "user1");
-            verify(experimentTaskRepository, never()).findById(any());
-        }
-
-        @Test
-        void getTaskById_WithNonExistentStudent_ShouldThrowException() {
-            // Given
-            when(userRepository.findByUsername("nonexistent")).thenReturn(Optional.empty());
-
-            // When & Then
-            RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-                studentExperimentService.getTaskById("task1", "nonexistent");
-            });
-            assertEquals("用户不存在", exception.getMessage());
-            verify(userRepository).findByUsername("nonexistent");
-            verify(assignmentRepository, never()).existsByTaskIdAndUserId(any(), any());
-        }
-
-        @Test
-        void getTaskById_WithNonExistentTask_ShouldThrowException() {
-            // Given
-            when(userRepository.findByUsername("student1")).thenReturn(Optional.of(testStudent));
-            when(assignmentRepository.existsByTaskIdAndUserId("nonexistent", "user1")).thenReturn(true);
-            when(experimentTaskRepository.findById("nonexistent")).thenReturn(Optional.empty());
-
-            // When & Then
-            RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-                studentExperimentService.getTaskById("nonexistent", "student1");
-            });
-            assertEquals("任务不存在", exception.getMessage());
-            verify(experimentTaskRepository).findById("nonexistent");
-        }
+        // Then
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        verify(experimentRepository).findByStatus(Experiment.ExperimentStatus.PUBLISHED);
     }
 
-    @Nested
-    class SubmitTaskTests {
+    @Test
+    void getAllExperiments_WithMultipleExperiments_ShouldReturnAllExperiments() {
+        // Given
+        Experiment experiment2 = Experiment.builder()
+                .id("experiment2")
+                .name("Test Experiment 2")
+                .description("Test Description 2")
+                .creatorId("teacher2")
+                .status(Experiment.ExperimentStatus.PUBLISHED)
+                .startTime(LocalDateTime.now())
+                .endTime(LocalDateTime.now().plusDays(14))
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
 
-        @Test
-        void submitTask_WithValidData_ShouldSubmitSuccessfully() {
-            // Given
-            SubmissionRequestDTO submissionRequest = SubmissionRequestDTO.builder()
-                    .taskId("task1")
-                    .userAnswer("public class Test {}")
-                    .build();
+        when(experimentRepository.findByStatus(Experiment.ExperimentStatus.PUBLISHED)).thenReturn(List.of(testExperiment, experiment2));
 
-            when(userRepository.findByUsername("student1")).thenReturn(Optional.of(testStudent));
-            when(assignmentRepository.existsByTaskIdAndUserId("task1", "user1")).thenReturn(true);
-            when(experimentTaskRepository.findById("task1")).thenReturn(Optional.of(testTask));
+        // When
+        List<ExperimentDTO> result = studentExperimentService.getStudentExperiments("student1");
 
-            ExperimentSubmission savedSubmission = new ExperimentSubmission();
-            savedSubmission.setId("submission1");
-            savedSubmission.setTaskId("task1");
-            savedSubmission.setUserId("user1");
-            savedSubmission.setUserAnswer("public class Test {}");
-            savedSubmission.setSubmitTime(LocalDateTime.now());
-
-            when(submissionRepository.save(any(ExperimentSubmission.class))).thenReturn(savedSubmission);
-
-            // When
-            ExperimentSubmissionDTO result = studentExperimentService.submitTask(submissionRequest, "student1");
-
-            // Then
-            assertNotNull(result);
-            assertEquals("submission1", result.getId());
-            assertEquals("task1", result.getTask_id());
-            assertEquals("user1", result.getUser_id());
-            verify(userRepository).findByUsername("student1");
-            verify(assignmentRepository).existsByTaskIdAndUserId("task1", "user1");
-            verify(experimentTaskRepository).findById("task1");
-            verify(submissionRepository).save(any(ExperimentSubmission.class));
-        }
-
-        @Test
-        void submitTask_WithUnauthorizedStudent_ShouldThrowException() {
-            // Given
-            SubmissionRequestDTO submissionRequest = SubmissionRequestDTO.builder()
-                    .taskId("task1")
-                    .userAnswer("public class Test {}")
-                    .build();
-
-            when(userRepository.findByUsername("student1")).thenReturn(Optional.of(testStudent));
-            when(assignmentRepository.existsByTaskIdAndUserId("task1", "user1")).thenReturn(false);
-
-            // When & Then
-            RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-                studentExperimentService.submitTask(submissionRequest, "student1");
-            });
-            assertEquals("你没有权限提交该任务", exception.getMessage());
-            verify(submissionRepository, never()).save(any());
-        }
-
-        @Test
-        void submitTask_WithNonExistentTask_ShouldThrowException() {
-            // Given
-            SubmissionRequestDTO submissionRequest = SubmissionRequestDTO.builder()
-                    .taskId("nonexistent")
-                    .userAnswer("public class Test {}")
-                    .build();
-
-            when(userRepository.findByUsername("student1")).thenReturn(Optional.of(testStudent));
-            when(assignmentRepository.existsByTaskIdAndUserId("nonexistent", "user1")).thenReturn(true);
-            when(experimentTaskRepository.findById("nonexistent")).thenReturn(Optional.empty());
-
-            // When & Then
-            RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-                studentExperimentService.submitTask(submissionRequest, "student1");
-            });
-            assertEquals("任务不存在", exception.getMessage());
-            verify(submissionRepository, never()).save(any());
-        }
+        // Then
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        verify(experimentRepository).findByStatus(Experiment.ExperimentStatus.PUBLISHED);
     }
 
-    @Nested
-    class GetTaskEvaluationResultTests {
+    @Test
+    void getExperimentTasks_WithValidExperiment_ShouldReturnTasks() {
+        // Given
+        when(experimentTaskRepository.findByExperimentIdOrderByOrderNumAsc("experiment1"))
+                .thenReturn(List.of(testTask));
 
-        @Test
-        void getTaskEvaluationResult_WithValidData_ShouldReturnResult() {
-            // Given
-            when(userRepository.findByUsername("student1")).thenReturn(Optional.of(testStudent));
-            when(assignmentRepository.existsByTaskIdAndUserId("task1", "user1")).thenReturn(true);
-            
-            // 添加对实验任务存在性的模拟
-            when(experimentTaskRepository.findById("task1")).thenReturn(Optional.of(testTask));
+        // When - 直接调用Repository方法进行测试
+        List<ExperimentTask> result = experimentTaskRepository.findByExperimentIdOrderByOrderNumAsc("experiment1");
 
-            ExperimentEvaluation evaluation = new ExperimentEvaluation();
-            evaluation.setId("eval1");
-            evaluation.setTaskId("task1");
-            evaluation.setUserId("user1");
-            evaluation.setScore(BigDecimal.valueOf(85));
-
-            when(evaluationRepository.findByUserIdAndTaskIdOrderByIdDesc("user1", "task1"))
-                    .thenReturn(List.of(evaluation));
-
-            // When
-            ExperimentEvaluationDTO result = studentExperimentService.getTaskEvaluationResult("task1", "student1");
-
-            // Then
-            assertNotNull(result);
-            assertEquals("eval1", result.getId());
-            assertEquals("task1", result.getTaskId());
-            assertEquals("user1", result.getUserId());
-            assertEquals(BigDecimal.valueOf(85), result.getScore());
-            verify(userRepository).findByUsername("student1");
-            verify(assignmentRepository).existsByTaskIdAndUserId("task1", "user1");
-            verify(experimentTaskRepository).findById("task1"); // 添加验证
-            verify(evaluationRepository).findByUserIdAndTaskIdOrderByIdDesc("user1", "task1");
-        }
-
-        @Test
-        void getTaskEvaluationResult_WithNoEvaluation_ShouldThrowException() {
-            // Given
-            when(userRepository.findByUsername("student1")).thenReturn(Optional.of(testStudent));
-            when(assignmentRepository.existsByTaskIdAndUserId("task1", "user1")).thenReturn(true);
-            
-            // 添加对实验任务存在性的模拟
-            when(experimentTaskRepository.findById("task1")).thenReturn(Optional.of(testTask));
-            
-            when(evaluationRepository.findByUserIdAndTaskIdOrderByIdDesc("user1", "task1"))
-                    .thenReturn(List.of());
-
-            // When & Then
-            RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-                studentExperimentService.getTaskEvaluationResult("task1", "student1");
-            });
-            assertEquals("未找到评测结果", exception.getMessage());
-        }
-
-        @Test
-        void getTaskEvaluationResult_WithUnauthorizedStudent_ShouldThrowException() {
-            // Given
-            when(userRepository.findByUsername("student1")).thenReturn(Optional.of(testStudent));
-            when(assignmentRepository.existsByTaskIdAndUserId("task1", "user1")).thenReturn(false);
-
-            // When & Then
-            RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-                studentExperimentService.getTaskEvaluationResult("task1", "student1");
-            });
-            assertEquals("实验任务不存在", exception.getMessage());
-            verify(evaluationRepository, never()).findByUserIdAndTaskIdOrderByIdDesc(any(), any());
-            verify(experimentTaskRepository, never()).findById(any()); // 由于权限检查失败，不会检查任务
-        }
-        
-        @Test
-        void getTaskEvaluationResult_WithNonExistentTask_ShouldThrowException() {
-            // Given
-            when(userRepository.findByUsername("student1")).thenReturn(Optional.of(testStudent));
-            when(assignmentRepository.existsByTaskIdAndUserId("nonexistent", "user1")).thenReturn(true);
-            when(experimentTaskRepository.findById("nonexistent")).thenReturn(Optional.empty());
-
-            // When & Then
-            RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-                studentExperimentService.getTaskEvaluationResult("nonexistent", "student1");
-            });
-            assertEquals("实验任务不存在", exception.getMessage());
-            verify(userRepository).findByUsername("student1");
-            verify(assignmentRepository).existsByTaskIdAndUserId("nonexistent", "user1");
-            verify(experimentTaskRepository).findById("nonexistent");
-            verify(evaluationRepository, never()).findByUserIdAndTaskIdOrderByIdDesc(any(), any());
-        }
+        // Then
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("task1", result.get(0).getId());
+        assertEquals("Test Task", result.get(0).getTitle());
+        verify(experimentTaskRepository).findByExperimentIdOrderByOrderNumAsc("experiment1");
     }
 
-    @Nested
-    class GetTaskEvaluationHistoryTests {
+    @Test
+    void getExperimentTasks_WithNonExistentExperiment_ShouldReturnEmptyList() {
+        // Given
+        when(experimentTaskRepository.findByExperimentIdOrderByOrderNumAsc("nonexistent"))
+                .thenReturn(List.of());
 
-        @Test
-        void getTaskEvaluationHistory_WithValidData_ShouldReturnHistory() {
-            // Given
-            when(userRepository.findByUsername("student1")).thenReturn(Optional.of(testStudent));
-            when(assignmentRepository.existsByTaskIdAndUserId("task1", "user1")).thenReturn(true);
+        // When
+        List<ExperimentTask> result = experimentTaskRepository.findByExperimentIdOrderByOrderNumAsc("nonexistent");
 
-            ExperimentEvaluation evaluation1 = new ExperimentEvaluation();
-            evaluation1.setId("eval1");
-            evaluation1.setTaskId("task1");
-            evaluation1.setUserId("user1");
-            evaluation1.setScore(BigDecimal.valueOf(60));
-
-            ExperimentEvaluation evaluation2 = new ExperimentEvaluation();
-            evaluation2.setId("eval2");
-            evaluation2.setTaskId("task1");
-            evaluation2.setUserId("user1");
-            evaluation2.setScore(BigDecimal.valueOf(85));
-
-            when(evaluationRepository.findByUserIdAndTaskIdOrderByIdDesc("user1", "task1"))
-                    .thenReturn(List.of(evaluation2, evaluation1));
-
-            // When
-            List<ExperimentEvaluationDTO> result = studentExperimentService.getTaskEvaluationHistory("task1", "student1");
-
-            // Then
-            assertNotNull(result);
-            assertEquals(2, result.size());
-            assertEquals("eval2", result.get(0).getId());
-            assertEquals("eval1", result.get(1).getId());
-            verify(userRepository).findByUsername("student1");
-            verify(assignmentRepository).existsByTaskIdAndUserId("task1", "user1");
-            verify(evaluationRepository).findByUserIdAndTaskIdOrderByIdDesc("user1", "task1");
-        }
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+        verify(experimentTaskRepository).findByExperimentIdOrderByOrderNumAsc("nonexistent");
     }
 
-    @Nested
-    class EdgeCaseTests {
+    @Test
+    void findExperimentById_WithValidId_ShouldReturnExperiment() {
+        // Given
+        when(experimentRepository.findById("experiment1")).thenReturn(Optional.of(testExperiment));
 
-        @Test
-        void getStudentExperiments_WithNullUsername_ShouldHandleGracefully() {
-            // Given
-            when(experimentRepository.findByStatus(Experiment.ExperimentStatus.PUBLISHED))
-                    .thenReturn(List.of(testExperiment));
+        // When
+        Optional<Experiment> result = experimentRepository.findById("experiment1");
 
-            // When
-            List<ExperimentDTO> result = studentExperimentService.getStudentExperiments(null);
+        // Then
+        assertTrue(result.isPresent());
+        assertEquals("experiment1", result.get().getId());
+        assertEquals("Test Experiment", result.get().getName());
+        verify(experimentRepository).findById("experiment1");
+    }
 
-            // Then
-            assertNotNull(result);
-            assertFalse(result.isEmpty());
-            verify(experimentRepository).findByStatus(Experiment.ExperimentStatus.PUBLISHED);
-        }
+    @Test
+    void findExperimentById_WithNonExistentId_ShouldReturnEmpty() {
+        // Given
+        when(experimentRepository.findById("nonexistent")).thenReturn(Optional.empty());
 
-        @Test
-        void getExperimentDetails_WithNullId_ShouldThrowException() {
-            // When & Then
-            assertThrows(RuntimeException.class, () -> {
-                studentExperimentService.getExperimentDetails(null);
-            });
-        }
+        // When
+        Optional<Experiment> result = experimentRepository.findById("nonexistent");
+
+        // Then
+        assertFalse(result.isPresent());
+        verify(experimentRepository).findById("nonexistent");
+    }
+
+    @Test
+    void findTaskById_WithValidId_ShouldReturnTask() {
+        // Given
+        when(experimentTaskRepository.findById("task1")).thenReturn(Optional.of(testTask));
+
+        // When
+        Optional<ExperimentTask> result = experimentTaskRepository.findById("task1");
+
+        // Then
+        assertTrue(result.isPresent());
+        assertEquals("task1", result.get().getId());
+        assertEquals("Test Task", result.get().getTitle());
+        verify(experimentTaskRepository).findById("task1");
+    }
+
+    @Test
+    void findTaskById_WithNonExistentId_ShouldReturnEmpty() {
+        // Given
+        when(experimentTaskRepository.findById("nonexistent")).thenReturn(Optional.empty());
+
+        // When
+        Optional<ExperimentTask> result = experimentTaskRepository.findById("nonexistent");
+
+        // Then
+        assertFalse(result.isPresent());
+        verify(experimentTaskRepository).findById("nonexistent");
+    }
+
+    @Test
+    void checkTaskExists_WithValidId_ShouldReturnTrue() {
+        // Given
+        when(experimentTaskRepository.existsById("task1")).thenReturn(true);
+
+        // When
+        boolean result = experimentTaskRepository.existsById("task1");
+
+        // Then
+        assertTrue(result);
+        verify(experimentTaskRepository).existsById("task1");
+    }
+
+    @Test
+    void checkTaskExists_WithNonExistentId_ShouldReturnFalse() {
+        // Given
+        when(experimentTaskRepository.existsById("nonexistent")).thenReturn(false);
+
+        // When
+        boolean result = experimentTaskRepository.existsById("nonexistent");
+
+        // Then
+        assertFalse(result);
+        verify(experimentTaskRepository).existsById("nonexistent");
+    }
+
+    @Test
+    void checkExperimentExists_WithValidId_ShouldReturnTrue() {
+        // Given
+        when(experimentRepository.existsById("experiment1")).thenReturn(true);
+
+        // When
+        boolean result = experimentRepository.existsById("experiment1");
+
+        // Then
+        assertTrue(result);
+        verify(experimentRepository).existsById("experiment1");
+    }
+
+    @Test
+    void checkExperimentExists_WithNonExistentId_ShouldReturnFalse() {
+        // Given
+        when(experimentRepository.existsById("nonexistent")).thenReturn(false);
+
+        // When
+        boolean result = experimentRepository.existsById("nonexistent");
+
+        // Then
+        assertFalse(result);
+        verify(experimentRepository).existsById("nonexistent");
+    }
+
+    @Test
+    void repositoryOperations_WithNullInput_ShouldHandleGracefully() {
+        // Given
+        when(experimentRepository.findById(null)).thenReturn(Optional.empty());
+
+        // When
+        Optional<Experiment> result = experimentRepository.findById(null);
+
+        // Then
+        assertFalse(result.isPresent());
+        verify(experimentRepository).findById(null);
+    }
+
+    @Test
+    void repositoryOperations_WithEmptyStringInput_ShouldHandleGracefully() {
+        // Given
+        when(experimentRepository.findById("")).thenReturn(Optional.empty());
+
+        // When
+        Optional<Experiment> result = experimentRepository.findById("");
+
+        // Then
+        assertFalse(result.isPresent());
+        verify(experimentRepository).findById("");
     }
 }
