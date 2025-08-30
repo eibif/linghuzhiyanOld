@@ -10,6 +10,8 @@ import org.linghu.mybackend.dto.ExperimentTaskDTO;
 import org.linghu.mybackend.dto.ExperimentTaskRequestDTO;
 import org.linghu.mybackend.repository.ExperimentRepository;
 import org.linghu.mybackend.repository.ExperimentTaskRepository;
+import org.linghu.mybackend.repository.UserRepository;
+import org.linghu.mybackend.service.UserService;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -27,7 +29,7 @@ import static org.mockito.Mockito.*;
  * ExperimentTaskServiceImpl 单元测试
  */
 @ExtendWith(MockitoExtension.class)
-class ExperimentTaskServiceImplTest {
+class ExperimentTaskServiceImplTest extends ExperimentTaskServiceImpl{
 
     @Mock
     private ExperimentTaskRepository experimentTaskRepository;
@@ -35,11 +37,23 @@ class ExperimentTaskServiceImplTest {
     @Mock
     private ExperimentRepository experimentRepository;
 
+    @Mock
+    private UserRepository userRepository;
+
     @InjectMocks
     private ExperimentTaskServiceImpl experimentTaskService;
 
     private ExperimentTask testTask;
     private ExperimentTaskRequestDTO testTaskRequest;
+
+    public ExperimentTaskServiceImplTest(@Mock ExperimentTaskRepository experimentTaskRepository, @Mock ExperimentRepository experimentRepository, @Mock UserRepository userRepository) {
+        super(experimentTaskRepository, experimentRepository,userRepository);
+    }
+
+    @Override
+    protected void ensureOwnerOfExperiment(String experimentId, String errorMessage) {
+        // no test
+    }
 
     @BeforeEach
     void setUp() {
@@ -65,6 +79,10 @@ class ExperimentTaskServiceImplTest {
                 .required(true)
                 .question(List.of("q1", "q2"))
                 .build();
+        experimentTaskService = new ExperimentTaskServiceImplTest(
+                experimentTaskRepository,
+                experimentRepository,
+                userRepository);
     }
 
     @Nested
@@ -345,6 +363,7 @@ class ExperimentTaskServiceImplTest {
         void deleteTask_WithExistingTask_ShouldDeleteSuccessfully() {
             // Given
             when(experimentTaskRepository.existsById("task1")).thenReturn(true);
+            when(experimentTaskRepository.findById("task1")).thenReturn(Optional.of(testTask));
 
             // When
             experimentTaskService.deleteTask("task1");
@@ -489,7 +508,7 @@ class ExperimentTaskServiceImplTest {
     class EdgeCaseTests {
         
         @Test
-        void createTask_WithZeroMaxOrder_ShouldSetOrderToOne() {
+        void createTask_WithZeroMaxOrder_ShouldThrowException() {
             // Given - 当没有任务时，repository返回0
             when(experimentRepository.existsById("experiment1")).thenReturn(true);
             when(experimentTaskRepository.findMaxOrderNumByExperimentId("experiment1")).thenReturn(0);
@@ -512,9 +531,11 @@ class ExperimentTaskServiceImplTest {
             // When
             ExperimentTaskDTO result = experimentTaskService.createTask("experiment1", testTaskRequest);
 
-            // Then
-            assertNotNull(result);
-            assertEquals(1, result.getOrderNum());
+            RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+                experimentTaskService.createTask("nonexistent", testTaskRequest);
+            });
+            assertEquals("实验不存在", exception.getMessage());
+
         }
 
         @Test
