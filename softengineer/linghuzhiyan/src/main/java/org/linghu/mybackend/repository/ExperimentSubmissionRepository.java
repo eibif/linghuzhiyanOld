@@ -1,5 +1,9 @@
 package org.linghu.mybackend.repository;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
 import org.linghu.mybackend.domain.ExperimentSubmission;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -7,11 +11,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
-import java.time.LocalDateTime;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
 
 /**
  * 实验提交仓储接口，负责实验提交数据的持久化
@@ -106,8 +105,9 @@ public interface ExperimentSubmissionRepository extends JpaRepository<Experiment
      * @param userId 用户ID
      * @return 提交记录（可选）
      */
-    @Query("SELECT es FROM ExperimentSubmission es WHERE es.taskId = :taskId AND es.userId = :userId ORDER BY es.submitTime DESC")
-    Optional<ExperimentSubmission> findByTaskIdAndUserId(@Param("taskId") String taskId, @Param("userId") String userId);
+  // 使用原方法签名，改为原生SQL并限制只取最新一条，避免多结果导致的异常
+  @Query(value = "SELECT * FROM experiment_submission WHERE task_id = :taskId AND user_id = :userId ORDER BY submit_time DESC LIMIT 1", nativeQuery = true)
+  Optional<ExperimentSubmission> findByTaskIdAndUserId(@Param("taskId") String taskId, @Param("userId") String userId);
     
     /**
      * 根据用户ID查找最新的提交记录
