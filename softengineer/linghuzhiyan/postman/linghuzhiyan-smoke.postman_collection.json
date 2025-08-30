@@ -31,6 +31,7 @@
     { "key": "experimentId", "value": "", "type": "string" },
   { "key": "taskId", "value": "", "type": "string" },
   { "key": "taskId2", "value": "", "type": "string" },
+  { "key": "experimentIdUnassigned", "value": "", "type": "string" },
     { "key": "announcementId", "value": "", "type": "string" },
   { "key": "messageId", "value": "", "type": "string" },
     { "key": "messageIdFromTeacher", "value": "", "type": "string" },
@@ -368,6 +369,22 @@
       },
       "event": [ { "listen": "test", "script": { "exec": [
         "pm.test('HTTP 403', () => pm.response.code===403);"
+      ] } } ]
+    },
+    {
+      "name": "09.8 - Teacher Create Another Experiment (DRAFT, unassigned)",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/experiments", "host": ["{{baseUrl}}"], "path": ["api","experiments"] },
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"未分配草稿实验-{{runId}}\",\n  \"description\": \"仅用于验证学生不应看到\",\n  \"status\": \"DRAFT\",\n  \"startTime\": \"2031-01-01T00:00:00\",\n  \"endTime\": \"2031-12-31T23:59:59\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "if(json && json.data && json.data.id){ pm.collectionVariables.set('experimentIdUnassigned', json.data.id); }",
+        "pm.test('记录 experimentIdUnassigned', () => !!pm.collectionVariables.get('experimentIdUnassigned'));"
       ] } } ]
     },
     {
@@ -881,6 +898,20 @@
   "pm.test('HTTP 200', function(){ pm.response.to.have.status(200); });",
         "const json = pm.response.json();",
         "pm.test('业务码 200', () => json && json.code === 200)"
+      ] } } ]
+    },
+    {
+      "name": "15a - Student Get My Experiments (should not include unassigned draft)",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/student/experiments", "host":["{{baseUrl}}"], "path":["api","student","experiments"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){}; pm.test('业务码 200', () => json && json.code===200);",
+        "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+        "const eid = pm.collectionVariables.get('experimentIdUnassigned');",
+        "const contains = arr.some(it => it && it.id===eid);",
+        "pm.test('学生实验列表不包含未发布且未分配的实验', () => contains===false);"
       ] } } ]
     },
     {
