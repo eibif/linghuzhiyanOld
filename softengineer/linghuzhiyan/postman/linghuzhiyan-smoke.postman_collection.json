@@ -15,15 +15,20 @@
     { "key": "studentUsername", "value": "student01", "type": "string" },
     { "key": "studentEmail", "value": "student01@example.com", "type": "string" },
     { "key": "studentPassword", "value": "Spass123", "type": "string" },
-  { "key": "student2Username", "value": "student02", "type": "string" },
-  { "key": "student2Email", "value": "student02@example.com", "type": "string" },
-  { "key": "student2Password", "value": "Spass123", "type": "string" },
+    { "key": "student2Username", "value": "student02", "type": "string" },
+    { "key": "student2Email", "value": "student02@example.com", "type": "string" },
+    { "key": "student2Password", "value": "Spass123", "type": "string" },
+    { "key": "student3Username", "value": "student03", "type": "string" },
+    { "key": "student3Email", "value": "student03@example.com", "type": "string" },
+    { "key": "student3Password", "value": "Spass123", "type": "string" },
     { "key": "teacherAuth", "value": "", "type": "string" },
     { "key": "studentAuth", "value": "", "type": "string" },
   { "key": "student2Auth", "value": "", "type": "string" },
     { "key": "teacherUserId", "value": "", "type": "string" },
     { "key": "studentUserId", "value": "", "type": "string" },
   { "key": "student2UserId", "value": "", "type": "string" },
+  { "key": "student3UserId", "value": "", "type": "string" },
+  { "key": "adminAvatarUrl", "value": "", "type": "string" },
     { "key": "experimentId", "value": "", "type": "string" },
     { "key": "taskId", "value": "", "type": "string" },
     { "key": "announcementId", "value": "", "type": "string" },
@@ -54,7 +59,7 @@
       ] } } ]
     },
     {
-      "name": "02 - Register Teacher",
+      "name": "02a - Register Teacher",
       "request": {
         "method": "POST",
         "header": [ { "key": "Content-Type", "value": "application/json" } ],
@@ -67,7 +72,7 @@
       ] } } ]
     },
     {
-      "name": "03 - Register Student",
+      "name": "02b - Register Student",
       "request": {
         "method": "POST",
         "header": [ { "key": "Content-Type", "value": "application/json" } ],
@@ -80,7 +85,7 @@
       ] } } ]
     },
     {
-      "name": "03b - Register Student 2",
+      "name": "02c - Register Student 2",
       "request": {
         "method": "POST",
         "header": [ { "key": "Content-Type", "value": "application/json" } ],
@@ -93,7 +98,20 @@
       ] } } ]
     },
     {
-      "name": "04 - Admin Get Users to Capture IDs",
+      "name": "02d - Register Student 3",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/users/register", "host": ["{{baseUrl}}"], "path": ["api","users","register"] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{student3Username}}\",\n  \"email\": \"{{student3Email}}\",\n  \"password\": \"{{student3Password}}\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+  "pm.test('HTTP 200/或用户名已存在(400)', () => [200,400].includes(pm.response.code));",
+  "if (pm.response.code === 200) { const json = pm.response.json(); pm.test('业务码 200', () => json && json.code === 200); }"
+      ] } } ]
+    },
+    {
+      "name": "03.1 - Admin Get Users to Capture IDs",
       "request": {
         "method": "GET",
         "header": [ { "key": "Authorization", "value": "{{authHeader}}" } ],
@@ -106,17 +124,20 @@
     "const t = list.find(u => u.username===pm.collectionVariables.get('teacherUsername'));",
     "const s = list.find(u => u.username===pm.collectionVariables.get('studentUsername'));",
     "const s2 = list.find(u => u.username===pm.collectionVariables.get('student2Username'));",
+    "const s3 = list.find(u => u.username===pm.collectionVariables.get('student3Username'));",
         "pm.collectionVariables.set('teacherUserId', (t && t.id) || '');",
         "pm.collectionVariables.set('studentUserId', (s && s.id) || '');",
     "pm.collectionVariables.set('student2UserId', (s2 && s2.id) || '');",
+    "pm.collectionVariables.set('student3UserId', (s3 && s3.id) || '');",
         "pm.test('拿到 teacherUserId', () => !!pm.collectionVariables.get('teacherUserId'));",
   "pm.test('拿到 studentUserId', () => !!pm.collectionVariables.get('studentUserId'));",
   "pm.test('拿到 student2UserId', () => !!pm.collectionVariables.get('student2UserId'));",
+  "pm.test('拿到 student3UserId', () => !!pm.collectionVariables.get('student3UserId'));",
   "pm.test('业务码 200', () => json && json.code === 200)"
       ] } } ]
     },
-    {
-      "name": "05 - Admin Set Teacher Role",
+  {
+    "name": "03.2.1 - Admin Set Teacher Role",
       "request": {
         "method": "POST",
         "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{authHeader}}" } ],
@@ -129,8 +150,165 @@
   "pm.test('业务码 200', () => json && json.code === 200)"
       ] } } ]
     },
+  {
+    "name": "03.2.2 - Admin Get Teacher User Detail",
+        "request": {
+          "method": "GET",
+          "header": [ { "key": "Authorization", "value": "{{authHeader}}" } ],
+          "url": {
+            "raw": "{{baseUrl}}/api/users/{{teacherUserId}}",
+            "host": ["{{baseUrl}}"],
+            "path": ["api", "users", "{{teacherUserId}}"]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const json = pm.response.json();",
+                "pm.test('HTTP 200', () => pm.response.code===200);",
+                "pm.test('业务码 200', () => json && json.code === 200);",
+                "pm.test('查看teacher的用户名', () => json && json.data && json.data.username === pm.collectionVariables.get('teacherUsername'));",
+                "pm.test('teacher已具备权限', () => json && json.data && Array.isArray(json.data.roles) && json.data.roles.includes('ROLE_TEACHER'));"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "03.3.1 - Admin Delete Student3 User",
+        "request": {
+          "method": "DELETE",
+          "header": [ { "key": "Authorization", "value": "{{authHeader}}" } ],
+          "url": {
+            "raw": "{{baseUrl}}/api/users/delete/{{student3UserId}}",
+            "host": ["{{baseUrl}}"],
+            "path": ["api", "users","delete", "{{student3UserId}}"]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const json = pm.response.json();",
+                "pm.test('HTTP 200', () => pm.response.code===200);",
+                "pm.test('业务码 200', () => json && json.code === 200);"
+              ]
+            }
+          }
+        ]
+      },
+      {
+      "name": "03.3.2 - Student3 Login",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/users/login", "host": ["{{baseUrl}}"], "path": ["api","users","login"] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{student3Username}}\",\n  \"password\": \"{{student3Password}}\",\n  \"role\": \"STUDENT\"\n}" }
+      },
+        "event": [ { "listen": "test", "script": { "exec": [
+          "pm.test('登录失败', () => [401].includes(pm.response.code));",
+          "let json = null; try { json = pm.response.json(); } catch(e) {}",
+          "pm.test('无token返回', () => !(json && json.data && json.data.token));"
+        ] } } ]
+      },
+      {
+        "name": "04.1 - Admin Get Profile",
+        "request": {
+          "method": "GET",
+          "header": [ { "key": "Authorization", "value": "{{authHeader}}" } ],
+          "url": { "raw": "{{baseUrl}}/api/users/profile", "host": ["{{baseUrl}}"], "path": ["api","users","profile"] }
+        },
+        "event": [ { "listen": "test", "script": { "exec": [
+          "const json = pm.response.json();",
+          "pm.test('HTTP 200', () => pm.response.code===200);",
+          "pm.test('业务码 200', () => json && json.code === 200);",
+          "pm.test('获取用户id', () => json && json.data && json.data.id && json.data.id === pm.collectionVariables.get('adminUserId'));",
+          "pm.test('获取用户名', () => json && json.data && json.data.username === pm.collectionVariables.get('adminUsername'));"
+        ] } } ]
+      },
+      {
+        "name": "04.2 - Admin Change Password (Should Fail)",
+        "request": {
+            "method": "PUT",
+            "header": [ { "key": "Authorization", "value": "{{authHeader}}" } ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/password?oldPassword=wrong%20password&newPassword=new%20password!",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","users","password"],
+              "query": [
+                { "key": "oldPassword", "value": "wrong password" },
+                { "key": "newPassword", "value": "new password!" }
+              ]
+            }
+        },
+        "event": [ { "listen": "test", "script": { "exec": [
+          "pm.test('修改密码失败', () => [400,401,404].includes(pm.response.code));"
+        ] } } ]
+    },
     {
-      "name": "06 - Admin Create Announcement",
+        "name": "04.3 - Admin Change Password",
+        "request": {
+            "method": "PUT",
+            "header": [ { "key": "Authorization", "value": "{{authHeader}}" } ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/password?oldPassword={{adminPassword}}&newPassword={{adminPassword}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","users","password"],
+              "query": [
+                { "key": "oldPassword", "value": "{{adminPassword}}" },
+                { "key": "newPassword", "value": "{{adminPassword}}" }
+              ]
+            }
+        },
+        "event": [ { "listen": "test", "script": { "exec": [
+          "pm.test('修改密码成功', () => [200].includes(pm.response.code));"
+        ] } } ]
+    },
+    {
+      "name": "04.4 - Admin Upload Avatar",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Authorization", "value": "{{authHeader}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/users/avatar", "host": ["{{baseUrl}}"], "path": ["api","users","avatar"] },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "file", "type": "file", "src": "avatar.jpg" }
+          ]
+        }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "const json = pm.response.json();",
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "pm.test('业务码 200', () => json && json.code === 200);",
+        "pm.test('返回头像URL', () => json && json.data && typeof json.data.avatarUrl === 'string' && json.data.avatarUrl.length > 0);",
+        "pm.collectionVariables.set('adminAvatarUrl', (json && json.data && json.data.avatarUrl) || '');"
+      ] } } ]
+    },
+    {
+      "name": "04.5 - Admin Update Profile",
+      "request": {
+        "method": "PUT",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{authHeader}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/users/profile", "host": ["{{baseUrl}}"], "path": ["api","users","profile"] },
+        "body": { "mode": "raw", "raw": "{\n  \"avatar\": \"{{adminAvatarUrl}}\",\n  \"profile\": {\n    \"realName\": \"real\",\n    \"gender\": \"male\",\n    \"birthdate\": \"1980-01-01\",\n    \"phoneNum\": \"13800000000\"\n  }\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+          "const json = pm.response.json();",
+          "pm.test('HTTP 200', () => pm.response.code===200);",
+          "pm.test('业务码 200', () => json && json.code === 200);",
+          "pm.test('头像已更新', () => json && json.data && json.data.avatar === pm.collectionVariables.get('adminAvatarUrl'));",
+          "pm.test('真实姓名已更新', () => json && json.data && json.data.profile && json.data.profile.realName === 'real');",
+          "pm.test('性别已更新', () => json && json.data && json.data.profile && json.data.profile.gender === 'male');",
+          "pm.test('生日已更新', () => json && json.data && json.data.profile && json.data.profile.birthdate === '1980-01-01');",
+          "pm.test('手机号已更新', () => json && json.data && json.data.profile && json.data.profile.phoneNum === '13800000000');"
+        ] } } ]
+    },
+    {
+      "name": "07 - Admin Create Announcement",
       "request": {
         "method": "POST",
         "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{authHeader}}" } ],
@@ -145,7 +323,7 @@
       ] } } ]
     },
     {
-      "name": "07 - Admin Send Message to Student",
+      "name": "08 - Admin Send Message to Student",
       "request": {
         "method": "POST",
         "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{authHeader}}" } ],
@@ -160,7 +338,7 @@
       ] } } ]
     },
     {
-      "name": "08 - Teacher Login",
+      "name": "09 - Teacher Login",
       "request": {
         "method": "POST",
         "header": [ { "key": "Content-Type", "value": "application/json" } ],
@@ -175,7 +353,7 @@
       ] } } ]
     },
     {
-      "name": "09 - Teacher Create Experiment",
+      "name": "10 - Teacher Create Experiment",
       "request": {
         "method": "POST",
         "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
@@ -191,7 +369,7 @@
       ] } } ]
     },
     {
-      "name": "09.5 - Teacher Publish Experiment",
+      "name": "10.5 - Teacher Publish Experiment",
       "request": {
         "method": "PUT",
         "header": [ { "key": "Authorization", "value": "{{teacherAuth}}" } ],
@@ -204,7 +382,7 @@
       ] } } ]
     },
     {
-      "name": "10 - Teacher Add Task",
+      "name": "11 - Teacher Add Task",
       "request": {
         "method": "POST",
         "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{teacherAuth}}" } ],
@@ -220,7 +398,7 @@
       ] } } ]
     },
     {
-      "name": "11 - Admin Assign Task To Student",
+      "name": "12 - Admin Assign Task To Student",
       "request": {
         "method": "POST",
         "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{authHeader}}" } ],
@@ -234,7 +412,7 @@
       ] } } ]
     },
     {
-      "name": "11b - Admin Assign Task To Student2",
+      "name": "12b - Admin Assign Task To Student2",
       "request": {
         "method": "POST",
         "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{authHeader}}" } ],
@@ -248,7 +426,7 @@
       ] } } ]
     },
     {
-      "name": "12 - Student Login",
+      "name": "13 - Student Login",
       "request": {
         "method": "POST",
         "header": [ { "key": "Content-Type", "value": "application/json" } ],
@@ -263,7 +441,7 @@
       ] } } ]
     },
     {
-      "name": "12b - Student2 Login",
+      "name": "13b - Student2 Login",
       "request": {
         "method": "POST",
         "header": [ { "key": "Content-Type", "value": "application/json" } ],
@@ -278,7 +456,7 @@
       ] } } ]
     },
     {
-      "name": "13 - Student Get Announcements",
+      "name": "14 - Student Get Announcements",
       "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/announcements", "host":["{{baseUrl}}"], "path":["api","announcements"] }
       },
@@ -289,7 +467,7 @@
       ] } } ]
     },
     {
-      "name": "13.5 - Admin Update Announcement",
+      "name": "14.5 - Admin Update Announcement",
       "request": {
         "method": "PUT",
         "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{authHeader}}"} ],
@@ -306,7 +484,7 @@
       ] } } ]
     },
     {
-      "name": "13.6 - Student Get Announcements (see updated)",
+      "name": "14.6 - Student Get Announcements (see updated)",
       "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/announcements", "host":["{{baseUrl}}"], "path":["api","announcements"] }
       },
@@ -325,7 +503,7 @@
       ] } } ]
     },
     {
-      "name": "14 - Student Get Messages",
+      "name": "15 - Student Get Messages",
       "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/messages/receiver", "host":["{{baseUrl}}"], "path":["api","messages","receiver"] }
       },
@@ -336,7 +514,7 @@
       ] } } ]
     },
     {
-      "name": "15 - Student Get My Experiments",
+      "name": "16 - Student Get My Experiments",
       "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/student/experiments", "host":["{{baseUrl}}"], "path":["api","student","experiments"] }
       },
@@ -347,7 +525,7 @@
       ] } } ]
     },
     {
-      "name": "15b - Student Get Assigned Tasks",
+      "name": "16b - Student Get Assigned Tasks",
       "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/student/experiments/tasks", "host":["{{baseUrl}}"], "path":["api","student","experiments","tasks"] }
       },
@@ -358,7 +536,7 @@
       ] } } ]
     },
     {
-      "name": "16 - Student Create Discussion",
+      "name": "17 - Student Create Discussion",
       "request": { "method": "POST", "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{studentAuth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/discussions", "host":["{{baseUrl}}"], "path":["api","discussions"] },
         "body": { "mode": "raw", "raw": "{\n  \"title\": \"关于自动化实验的讨论\",\n  \"content\": \"这是学生就分配的实验发起的讨论。\",\n  \"richContent\": { \"html\": \"<p>这是更丰富的讨论内容</p>\", \"delta\": {} },\n  \"tags\": [\"实验\", \"讨论\"],\n  \"experimentId\": \"{{experimentId}}\"\n}" }
@@ -372,7 +550,7 @@
       ] } } ]
   },
     {
-      "name": "16.4 - Student1 Get Discussions (pending visible to self)",
+      "name": "17.4 - Student1 Get Discussions (pending visible to self)",
       "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/discussions?experimentId={{experimentId}}&page=0&size=10", "host":["{{baseUrl}}"], "path":["api","discussions"], "query":[{"key":"experimentId","value":"{{experimentId}}"},{"key":"page","value":"0"},{"key":"size","value":"10"}] }
       },
@@ -388,7 +566,7 @@
       ] } } ]
     },
     {
-      "name": "16.5 - Student2 Get Discussions (pending not visible)",
+      "name": "17.5 - Student2 Get Discussions (pending not visible)",
       "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{student2Auth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/discussions?experimentId={{experimentId}}&page=0&size=10", "host":["{{baseUrl}}"], "path":["api","discussions"], "query":[{"key":"experimentId","value":"{{experimentId}}"},{"key":"page","value":"0"},{"key":"size","value":"10"}] }
       },
@@ -404,7 +582,7 @@
       ] } } ]
     },
     {
-      "name": "16.6 - Admin Approve Discussion",
+      "name": "17.6 - Admin Approve Discussion",
       "request": { "method": "PUT", "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{authHeader}}"} ],
         "url": { "raw": "{{baseUrl}}/api/discussions/{{discussionId}}/review", "host":["{{baseUrl}}"], "path":["api","discussions","{{discussionId}}","review"] },
         "body": { "mode":"raw", "raw": "{\n  \"status\": \"APPROVED\"\n}" }
@@ -416,7 +594,7 @@
       ] } } ]
     },
     {
-      "name": "16.7 - Student2 Get Discussions (approved visible)",
+      "name": "17.7 - Student2 Get Discussions (approved visible)",
       "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{student2Auth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/discussions?experimentId={{experimentId}}&page=0&size=10", "host":["{{baseUrl}}"], "path":["api","discussions"], "query":[{"key":"experimentId","value":"{{experimentId}}"},{"key":"page","value":"0"},{"key":"size","value":"10"}] }
       },
@@ -432,7 +610,7 @@
       ] } } ]
     },
     {
-      "name": "16.71 - Student2 Like Discussion",
+      "name": "17.71 - Student2 Like Discussion",
       "request": { "method": "POST", "header": [ {"key":"Authorization","value":"{{student2Auth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/discussions/{{discussionId}}/like", "host":["{{baseUrl}}"], "path":["api","discussions","{{discussionId}}","like"] }
       },
@@ -444,7 +622,7 @@
       ] } } ]
     },
     {
-      "name": "16.72 - Student2 Unlike Discussion",
+      "name": "17.72 - Student2 Unlike Discussion",
       "request": { "method": "POST", "header": [ {"key":"Authorization","value":"{{student2Auth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/discussions/{{discussionId}}/like", "host":["{{baseUrl}}"], "path":["api","discussions","{{discussionId}}","like"] }
       },
@@ -456,7 +634,7 @@
       ] } } ]
     },
     {
-      "name": "16.75 - Student1 Update Discussion (after approval)",
+      "name": "17.75 - Student1 Update Discussion (after approval)",
       "request": {
         "method": "PUT",
         "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{studentAuth}}" } ],
@@ -473,7 +651,7 @@
       ] } } ]
     },
     {
-      "name": "16.76 - Student2 Get Discussions (still old content before re-approve)",
+      "name": "17.76 - Student2 Get Discussions (still old content before re-approve)",
       "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{student2Auth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/discussions?experimentId={{experimentId}}&page=0&size=10", "host":["{{baseUrl}}"], "path":["api","discussions"], "query":[{"key":"experimentId","value":"{{experimentId}}"},{"key":"page","value":"0"},{"key":"size","value":"10"}] }
       },
@@ -490,7 +668,7 @@
       ] } } ]
     },
     {
-      "name": "16.77 - Admin Approve Discussion (after edit)",
+      "name": "17.77 - Admin Approve Discussion (after edit)",
       "request": { "method": "PUT", "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{authHeader}}"} ],
         "url": { "raw": "{{baseUrl}}/api/discussions/{{discussionId}}/review", "host":["{{baseUrl}}"], "path":["api","discussions","{{discussionId}}","review"] },
         "body": { "mode":"raw", "raw": "{\n  \"status\": \"APPROVED\"\n}" }
@@ -502,7 +680,7 @@
       ] } } ]
     },
     {
-      "name": "16.78 - Student2 Get Discussions (now sees edited)",
+      "name": "17.78 - Student2 Get Discussions (now sees edited)",
       "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{student2Auth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/discussions?experimentId={{experimentId}}&page=0&size=10", "host":["{{baseUrl}}"], "path":["api","discussions"], "query":[{"key":"experimentId","value":"{{experimentId}}"},{"key":"page","value":"0"},{"key":"size","value":"10"}] }
       },
@@ -520,7 +698,7 @@
       ] } } ]
     },
     {
-      "name": "16.8 - Student2 Reply to Discussion",
+      "name": "17.8 - Student2 Reply to Discussion",
       "request": { "method": "POST", "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{student2Auth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/discussions/{{discussionId}}/comments", "host":["{{baseUrl}}"], "path":["api","discussions","{{discussionId}}","comments"] },
         "body": { "mode":"raw", "raw": "{\n  \"content\": \"二号学生的回复\"\n}" }
@@ -534,7 +712,7 @@
       ] } } ]
     },
     {
-      "name": "16.9 - Student1 Get Replies (should see reply)",
+      "name": "17.9 - Student1 Get Replies (should see reply)",
       "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/discussions/{{discussionId}}/comments?rootOnly=false&page=0&size=10", "host":["{{baseUrl}}"], "path":["api","discussions","{{discussionId}}","comments"], "query":[{"key":"rootOnly","value":"false"},{"key":"page","value":"0"},{"key":"size","value":"10"}] }
       },
@@ -549,7 +727,7 @@
       ] } } ]
     },
     {
-      "name": "16.10 - Student1 Like Student2 Reply",
+      "name": "17.10 - Student1 Like Student2 Reply",
       "request": { "method": "POST", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/comments/{{commentId}}/like", "host":["{{baseUrl}}"], "path":["api","comments","{{commentId}}","like"] }
       },
@@ -559,7 +737,7 @@
       ] } } ]
     },
     {
-      "name": "16.11 - Student1 Unlike Student2 Reply",
+      "name": "17.11 - Student1 Unlike Student2 Reply",
       "request": { "method": "POST", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/comments/{{commentId}}/like", "host":["{{baseUrl}}"], "path":["api","comments","{{commentId}}","like"] }
       },
@@ -569,7 +747,7 @@
       ] } } ]
     },
     {
-      "name": "16.12 - Student1 Reply to Student2 Reply",
+      "name": "17.12 - Student1 Reply to Student2 Reply",
       "request": { "method": "POST", "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{studentAuth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/discussions/{{discussionId}}/comments", "host":["{{baseUrl}}"], "path":["api","discussions","{{discussionId}}","comments"] },
         "body": { "mode":"raw", "raw": "{\n  \"content\": \"学生1对学生2回复的回复\",\n  \"parentId\": \"{{commentId}}\"\n}" }
@@ -581,7 +759,7 @@
       ] } } ]
     },
     {
-      "name": "16.13 - Student2 Get Replies of Own Comment",
+      "name": "17.13 - Student2 Get Replies of Own Comment",
       "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{student2Auth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/comments/{{commentId}}/replies?page=0&size=10", "host":["{{baseUrl}}"], "path":["api","comments","{{commentId}}","replies"], "query":[{"key":"page","value":"0"},{"key":"size","value":"10"}] }
       },
@@ -592,7 +770,7 @@
       ] } } ]
     },
     {
-      "name": "16.14 - Student2 Report Student1 Reply",
+      "name": "17.14 - Student2 Report Student1 Reply",
       "request": { "method": "POST", "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{student2Auth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/comments/{{replyCommentId}}/report", "host":["{{baseUrl}}"], "path":["api","comments","{{replyCommentId}}","report"] },
         "body": { "mode":"raw", "raw": "{\n  \"reason\": \"INAPPROPRIATE\",\n  \"details\": \"测试举报\"\n}" }
@@ -602,7 +780,7 @@
       ] } } ]
     },
     {
-      "name": "16.15 - Student2 Try Delete Student1 Reply (should fail 403)",
+      "name": "17.15 - Student2 Try Delete Student1 Reply (should fail 403)",
       "request": { "method": "DELETE", "header": [ {"key":"Authorization","value":"{{student2Auth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/comments/{{replyCommentId}}", "host":["{{baseUrl}}"], "path":["api","comments","{{replyCommentId}}"] }
       },
@@ -611,7 +789,7 @@
       ] } } ]
     },
     {
-      "name": "16.15 - Student1 Delete Own Reply",
+      "name": "17.16 - Student1 Delete Own Reply",
       "request": { "method": "DELETE", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/comments/{{replyCommentId}}", "host":["{{baseUrl}}"], "path":["api","comments","{{replyCommentId}}"] }
       },
