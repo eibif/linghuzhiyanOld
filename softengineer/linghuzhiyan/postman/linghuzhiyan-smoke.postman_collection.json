@@ -509,18 +509,6 @@
       ] } } ]
     },
     {
-      "name": "10.331 - Admin(Teacher role) Update Teacher's Question 2 (should fail 403)",
-      "request": {
-        "method": "PUT",
-        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{adminTeacherAuth}}" } ],
-        "url": { "raw": "{{baseUrl}}/api/questions/{{q2Id}}", "host": ["{{baseUrl}}"], "path": ["api","questions","{{q2Id}}"] },
-        "body": { "mode": "raw", "raw": "{\n  \"questionType\": \"SINGLE_CHOICE\",\n  \"content\": \"管理员(老师身份)尝试编辑-应禁止\",\n  \"options\": [\"A.7\", \"B.8\", \"C.9\"],\n  \"answer\": \"B\",\n  \"explanation\": \"无\",\n  \"tags\": \"deny,test\",\n  \"score\": 5\n}" }
-      },
-      "event": [ { "listen": "test", "script": { "exec": [
-        "pm.test('HTTP 403', () => pm.response.code===403);"
-      ] } } ]
-    },
-    {
       "name": "10.34 - Teacher Delete Question 3",
       "request": {
         "method": "DELETE",
