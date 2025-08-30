@@ -16,9 +16,9 @@ pipeline {
                     script {
                         if (isUnix()) {
                             sh 'chmod +x mvnw || echo skip'
-                            sh './mvnw clean package -DskipTests'
+                            sh './mvnw clean package'
                         } else {
-                            bat 'mvnw.cmd clean package -DskipTests'
+                            bat 'mvnw.cmd clean package'
                         }
                     }
                 }
