@@ -92,7 +92,7 @@ public class ExperimentServiceImpl implements ExperimentService {
         // 检查权限（仅创建者可以更新）
         if (!experiment.getCreatorId().equals(user.getId())) {
             // 抛出权限异常，交由全局异常处理转为 403
-            throw new AccessDeniedException("权限不足：无权更新此实验");
+            throw new AccessDeniedException("无权更新此实验");
         }
         experiment.setName(requestDTO.getName());
         experiment.setDescription(requestDTO.getDescription());
@@ -135,8 +135,8 @@ public class ExperimentServiceImpl implements ExperimentService {
         Experiment experiment = experimentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("实验不存在"));
         // 仅创建者可以发布：从安全上下文获取当前用户
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = (auth != null) ? auth.getName() : null;
+
+        String username = getCurrentUsernameFromSecurityContext();
         if (username == null || "anonymousUser".equals(username)) {
             throw new AccessDeniedException("未认证或权限不足：无权发布此实验");
         }
@@ -158,9 +158,7 @@ public class ExperimentServiceImpl implements ExperimentService {
     public ExperimentDTO unpublishExperiment(String id) {
         Experiment experiment = experimentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("实验不存在"));
-        // 仅创建者可以取消发布：从安全上下文获取当前用户
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = (auth != null) ? auth.getName() : null;
+        String username =getCurrentUsernameFromSecurityContext();
         if (username == null || "anonymousUser".equals(username)) {
             throw new AccessDeniedException("未认证或权限不足：无权取消发布此实验");
         }
@@ -191,5 +189,14 @@ public class ExperimentServiceImpl implements ExperimentService {
         dto.setStartTime(experiment.getStartTime());
         dto.setEndTime(experiment.getEndTime());
         return dto;
+    }
+    /**
+     * 获取当前认证用户的用户名
+     *
+     * @return 当前用户名，若未认证则返回null
+     */
+    protected String getCurrentUsernameFromSecurityContext() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return (auth != null) ? auth.getName() : null;
     }
 }

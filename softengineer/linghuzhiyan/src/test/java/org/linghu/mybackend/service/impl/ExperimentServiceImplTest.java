@@ -75,6 +75,7 @@ class ExperimentServiceImplTest {
                 .startTime(now.plusDays(1))
                 .endTime(now.plusDays(7))
                 .build();
+        experimentService = spy(experimentService);
     }
 
     @Test
@@ -239,7 +240,7 @@ class ExperimentServiceImplTest {
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
             experimentService.updateExperiment("experiment1", testExperimentRequest, "anotheruser");
         });
-        assertEquals("无权限更新此实验", exception.getMessage());
+        assertEquals("无权更新此实验", exception.getMessage());
         verify(experimentRepository, never()).save(any(Experiment.class));
     }
 
@@ -284,6 +285,8 @@ class ExperimentServiceImplTest {
                 .build();
                 
         when(experimentRepository.save(any(Experiment.class))).thenReturn(publishedExperiment);
+        doReturn("testuser").when(experimentService).getCurrentUsernameFromSecurityContext();
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
 
         // When
         ExperimentDTO result = experimentService.publishExperiment("experiment1");
@@ -338,6 +341,9 @@ class ExperimentServiceImplTest {
                 .build();
                 
         when(experimentRepository.save(any(Experiment.class))).thenReturn(unpublishedExperiment);
+        doReturn("user1").when(experimentService).getCurrentUsernameFromSecurityContext();
+        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(testUser));
+
 
         // When
         ExperimentDTO result = experimentService.unpublishExperiment("experiment1");

@@ -123,7 +123,8 @@ public class ExperimentTaskServiceImpl implements ExperimentTaskService {
         }
     // 权限检查：仅实验创建者可删除任务
     ExperimentTask task = experimentTaskRepository.findById(id)
-        .orElseThrow(() -> new RuntimeException("任务不存在"));
+            .orElseThrow(() -> new RuntimeException("任务不存在"));
+
     ensureOwnerOfExperiment(task.getExperimentId(), "无权删除该实验任务");
 
     experimentTaskRepository.deleteById(id);
@@ -167,16 +168,16 @@ public class ExperimentTaskServiceImpl implements ExperimentTaskService {
     /**
      * 校验当前登录用户是否为实验创建者
      */
-    private void ensureOwnerOfExperiment(String experimentId, String messageIfDenied) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = (auth != null) ? auth.getName() : null;
+    protected void ensureOwnerOfExperiment(String experimentId, String messageIfDenied) {
+
+        var experiment = experimentRepository.findById(experimentId)
+                .orElseThrow(() -> new RuntimeException("实验不存在"));
+        String username = getCurrentUsernameFromSecurityContext();
         if (username == null || "anonymousUser".equals(username)) {
             throw new AccessDeniedException("未认证或权限不足");
         }
         var user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("用户不存在"));
-        var experiment = experimentRepository.findById(experimentId)
-                .orElseThrow(() -> new RuntimeException("实验不存在"));
         if (!experiment.getCreatorId().equals(user.getId())) {
             throw new AccessDeniedException(messageIfDenied != null ? messageIfDenied : "权限不足");
         }
@@ -202,5 +203,14 @@ public class ExperimentTaskServiceImpl implements ExperimentTaskService {
                 .createdAt(task.getCreatedAt())
                 .updatedAt(task.getUpdatedAt())
                 .build();
+    }
+    /**
+     * 获取当前认证用户的用户名
+     *
+     * @return 当前用户名，若未认证则返回null
+     */
+    protected String getCurrentUsernameFromSecurityContext() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return (auth != null) ? auth.getName() : null;
     }
 }
