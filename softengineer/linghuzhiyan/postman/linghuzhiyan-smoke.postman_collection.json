@@ -38,7 +38,9 @@
   { "key": "assistantMessageId", "value": "", "type": "string" },
   { "key": "discussionId", "value": "", "type": "string" },
   { "key": "commentId", "value": "", "type": "string" },
-  { "key": "replyCommentId", "value": "", "type": "string" }
+  { "key": "replyCommentId", "value": "", "type": "string" },
+  { "key": "resourceId", "value": "", "type": "string" },
+  { "key": "resourceId2", "value": "", "type": "string" }
   , { "key": "q1Id", "value": "", "type": "string" }
   , { "key": "q2Id", "value": "", "type": "string" }
   , { "key": "q3Id", "value": "", "type": "string" }
@@ -1033,7 +1035,7 @@
       "event": [ { "listen": "test", "script": { "exec": [
   "pm.test('HTTP 200', () => pm.response.code===200);",
   "let json=null; try{ json=pm.response.json(); }catch(e){}",
-  "pm.test('业务码 200', () => json && json.code === 200);",
+  "pm.test('业务码 200', () => json && json.code===200);",
   "const payload = json && json.data;",
   "let items = []; if(payload){ if(Array.isArray(payload.items)) items=payload.items; else if(Array.isArray(payload.list)) items=payload.list; }",
         "const did = pm.collectionVariables.get('discussionId');",
@@ -1049,7 +1051,7 @@
       "event": [ { "listen": "test", "script": { "exec": [
   "pm.test('HTTP 200', () => pm.response.code===200);",
   "let json=null; try{ json=pm.response.json(); }catch(e){}",
-  "pm.test('业务码 200', () => json && json.code === 200);",
+  "pm.test('业务码 200', () => json && json.code===200);",
   "const payload = json && json.data;",
   "let items = []; if(payload){ if(Array.isArray(payload.items)) items=payload.items; else if(Array.isArray(payload.list)) items=payload.list; }",
         "const did = pm.collectionVariables.get('discussionId');",
@@ -1134,7 +1136,7 @@
       "event": [ { "listen": "test", "script": { "exec": [
         "pm.test('HTTP 200', () => pm.response.code===200);",
         "let json=null; try{ json=pm.response.json(); }catch(e){}",
-        "pm.test('业务码 200', () => json && json.code === 200);",
+        "pm.test('业务码 200', () => json && json.code===200);",
         "const payload = json && json.data; let items = []; if(payload){ if(Array.isArray(payload.items)) items=payload.items; else if(Array.isArray(payload.list)) items=payload.list; }",
         "const did = pm.collectionVariables.get('discussionId');",
         "const target = items.find(it => it && (it.id===did));",
@@ -1226,7 +1228,7 @@
       "name": "16.12 - Student1 Reply to Student2 Reply",
       "request": { "method": "POST", "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{studentAuth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/discussions/{{discussionId}}/comments", "host":["{{baseUrl}}"], "path":["api","discussions","{{discussionId}}","comments"] },
-        "body": { "mode":"raw", "raw": "{\n  \"content\": \"学生1对学生2回复的回复\",\n  \"parentId\": \"{{commentId}}\"\n}" }
+        "body": { "mode": "raw", "raw": "{\n  \"content\": \"学生1对学生2回复的回复\",\n  \"parentId\": \"{{commentId}}\"\n}" }
       },
       "event": [ { "listen": "test", "script": { "exec": [
   "const json = pm.response.json(); pm.test('HTTP 200', function(){ pm.response.to.have.status(200); }); pm.test('业务码 200', () => json && json.code===200);",
@@ -1287,6 +1289,466 @@
         "pm.test('搜索命中q1与q2', () => ids.includes(pm.collectionVariables.get('q1Id')) && ids.includes(pm.collectionVariables.get('q2Id')));",
         "pm.test('不包含已删除的q3', () => !ids.includes(pm.collectionVariables.get('q3Id')));"
       ] } } ]
+    },
+    {
+      "name": "18.1 - Teacher Upload Resource (Valid)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "{{teacherAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/upload",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "upload"]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": [],
+              "value": "测试资源内容-{{runId}}"
+            },
+            {
+              "key": "experimentId",
+              "value": "{{experimentId}}"
+            },
+            {
+              "key": "taskId", 
+              "value": "{{taskId}}"
+            },
+            {
+              "key": "description",
+              "value": "自动化测试上传的资源文件"
+            },
+            {
+              "key": "uploadType",
+              "value": "resource"
+            },
+            {
+              "key": "autoExtract",
+              "value": "false"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.code===200);",
+              "const json = pm.response.json();",
+              "pm.test('业务码 200', () => json && json.code===200);",
+              "if(json && json.data && json.data.id){ pm.collectionVariables.set('resourceId', json.data.id); }",
+              "pm.test('拿到 resourceId', () => !!pm.collectionVariables.get('resourceId'));",
+              "pm.test('返回正确的实验ID', () => json && json.data && json.data.experimentId===pm.collectionVariables.get('experimentId'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.2 - Student Upload Resource (should fail 403)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "{{studentAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/upload",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "upload"]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file", 
+              "src": [],
+              "value": "学生尝试上传的文件"
+            },
+            {
+              "key": "experimentId",
+              "value": "{{experimentId}}"
+            },
+            {
+              "key": "taskId",
+              "value": "{{taskId}}"
+            },
+            {
+              "key": "description", 
+              "value": "学生不应有权限上传"
+            },
+            {
+              "key": "uploadType",
+              "value": "resource"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.code===403);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.3 - Admin Get All Resources",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "{{authHeader}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.code===200);",
+              "const json = pm.response.json();",
+              "pm.test('业务码 200', () => json && json.code===200);",
+              "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+              "const rid = pm.collectionVariables.get('resourceId');",
+              "const found = arr.some(r => r && r.id===rid);",
+              "pm.test('管理员能看到刚上传的资源', () => found);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.4 - Teacher Get Experiment Resources",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "{{teacherAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/experiments/{{experimentId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "experiments", "{{experimentId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.code===200);",
+              "const json = pm.response.json();",
+              "pm.test('业务码 200', () => json && json.code===200);",
+              "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+              "const rid = pm.collectionVariables.get('resourceId');",
+              "const found = arr.some(r => r && r.id===rid);",
+              "pm.test('教师能看到自己实验的资源', () => found);",
+              "pm.test('所有资源都属于该实验', () => arr.every(r => r && r.experimentId===pm.collectionVariables.get('experimentId')));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.5 - Student Get Experiment Resources (accessible experiment)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "{{studentAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/experiments/{{experimentId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "experiments", "{{experimentId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.code===200);",
+              "const json = pm.response.json();",
+              "pm.test('业务码 200', () => json && json.code===200);",
+              "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+              "const rid = pm.collectionVariables.get('resourceId');",
+              "const found = arr.some(r => r && r.id===rid);",
+              "pm.test('学生能看到分配实验的资源', () => found);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.6 - Get Resource Details",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "{{teacherAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/{{resourceId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "{{resourceId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.code===200);",
+              "const json = pm.response.json();",
+              "pm.test('业务码 200', () => json && json.code===200);",
+              "pm.test('返回正确的资源ID', () => json && json.data && json.data.id===pm.collectionVariables.get('resourceId'));",
+              "pm.test('资源属于正确的实验', () => json && json.data && json.data.experimentId===pm.collectionVariables.get('experimentId'));",
+              "if(json && json.data){ pm.collectionVariables.set('resourceFileName', json.data.fileName || ''); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.7 - Teacher Update Resource Info",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "{{teacherAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/{{resourceId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "{{resourceId}}"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"experimentId\": \"{{experimentId}}\",\n  \"taskId\": \"{{taskId}}\",\n  \"description\": \"更新后的资源描述-{{runId}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.code===200);",
+              "const json = pm.response.json();",
+              "pm.test('业务码 200', () => json && json.code===200);",
+              "pm.test('返回同一资源ID', () => json && json.data && json.data.id===pm.collectionVariables.get('resourceId'));",
+              "const runId = pm.collectionVariables.get('runId');",
+              "pm.test('描述已更新', () => json && json.data && json.data.description && json.data.description.includes(runId));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.8 - Admin(Teacher role) Update Other's Resource (should fail 403)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "{{adminTeacherAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/{{resourceId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "{{resourceId}}"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"experimentId\": \"{{experimentId}}\",\n  \"description\": \"管理员(教师身份)尝试修改-应禁止\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.code===403);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.9 - Download Resource File",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "{{studentAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/{{resourceId}}/download",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "{{resourceId}}", "download"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.code===200);",
+              "pm.test('返回文件内容', () => pm.response.responseSize > 0);",
+              "const contentDisposition = pm.response.headers.get('Content-Disposition');",
+              "pm.test('包含文件下载头', () => contentDisposition && contentDisposition.includes('attachment'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.10 - Teacher Upload Second Resource",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "{{teacherAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/upload",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "upload"]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": [],
+              "value": "第二个测试资源-{{runId}}"
+            },
+            {
+              "key": "experimentId",
+              "value": "{{experimentId}}"
+            },
+            {
+              "key": "taskId",
+              "value": "{{taskId}}"
+            },
+            {
+              "key": "description",
+              "value": "用于删除测试的资源"
+            },
+            {
+              "key": "uploadType",
+              "value": "resource"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.code===200);",
+              "const json = pm.response.json();",
+              "pm.test('业务码 200', () => json && json.code===200);",
+              "if(json && json.data && json.data.id){ pm.collectionVariables.set('resourceId2', json.data.id); }",
+              "pm.test('拿到 resourceId2', () => !!pm.collectionVariables.get('resourceId2'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.11 - Student Delete Resource (should fail 403)",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "{{studentAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/{{resourceId2}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "{{resourceId2}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.code===403);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.12 - Teacher Delete Own Resource",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "{{teacherAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/{{resourceId2}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "{{resourceId2}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.code===200);",
+              "const json = pm.response.json();",
+              "pm.test('业务码 200', () => json && json.code===200);",
+              "pm.collectionVariables.unset('resourceId2');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18.13 - Verify Resources After Deletion",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "{{teacherAuth}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/resources/experiments/{{experimentId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resources", "experiments", "{{experimentId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.code===200);",
+              "const json = pm.response.json();",
+              "pm.test('业务码 200', () => json && json.code===200);",
+              "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+              "const rid1 = pm.collectionVariables.get('resourceId');",
+              "const rid2 = pm.collectionVariables.get('resourceId2');",
+              "const has1 = arr.some(r => r && r.id===rid1);",
+              "const has2 = arr.some(r => r && r.id===rid2);",
+              "pm.test('第一个资源仍存在', () => has1);",
+              "pm.test('第二个资源已删除', () => !has2);"
+            ]
+          }
+        }
+      ]
     }
   ]
 }
