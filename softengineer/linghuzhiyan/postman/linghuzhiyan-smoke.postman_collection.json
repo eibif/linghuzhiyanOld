@@ -20,6 +20,9 @@
   { "key": "student2Username", "value": "student02", "type": "string" },
   { "key": "student2Email", "value": "student02@example.com", "type": "string" },
   { "key": "student2Password", "value": "Spass123", "type": "string" },
+  { "key": "student3Username", "value": "student03", "type": "string" },
+  { "key": "student3Email", "value": "student03@example.com", "type": "string" },
+  { "key": "student3Password", "value": "Spass123", "type": "string" },
     { "key": "teacherAuth", "value": "", "type": "string" },
   { "key": "assistantAuth", "value": "", "type": "string" },
   { "key": "adminTeacherAuth", "value": "", "type": "string" },
@@ -28,6 +31,7 @@
     { "key": "teacherUserId", "value": "", "type": "string" },
     { "key": "studentUserId", "value": "", "type": "string" },
   { "key": "student2UserId", "value": "", "type": "string" },
+  { "key": "adminAvatarUrl", "value": "", "type": "string" },
     { "key": "experimentId", "value": "", "type": "string" },
   { "key": "taskId", "value": "", "type": "string" },
   { "key": "taskId2", "value": "", "type": "string" },
@@ -100,6 +104,19 @@
         "header": [ { "key": "Content-Type", "value": "application/json" } ],
         "url": { "raw": "{{baseUrl}}/api/users/register", "host": ["{{baseUrl}}"], "path": ["api","users","register"] },
         "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{student2Username}}\",\n  \"email\": \"{{student2Email}}\",\n  \"password\": \"{{student2Password}}\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+  "pm.test('HTTP 200/或用户名已存在(400)', function(){ pm.expect([200,400]).to.include(pm.response.code); });",
+  "if (pm.response.code === 200) { const json = pm.response.json(); pm.test('业务码 200', () => json && json.code === 200); }"
+      ] } } ]
+    },
+    {
+      "name": "03c - Register Student 3",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/users/register", "host": ["{{baseUrl}}"], "path": ["api","users","register"] },
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{student3Username}}\",\n  \"email\": \"{{student3Email}}\",\n  \"password\": \"{{student3Password}}\"\n}" }
       },
       "event": [ { "listen": "test", "script": { "exec": [
   "pm.test('HTTP 200/或用户名已存在(400)', function(){ pm.expect([200,400]).to.include(pm.response.code); });",
