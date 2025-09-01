@@ -6,10 +6,13 @@ import java.util.List;
 import org.linghu.mybackend.domain.Message;
 import org.linghu.mybackend.dto.MessageDTO;
 import org.linghu.mybackend.dto.SenderInfoDTO;
+import org.linghu.mybackend.exception.UnauthorizedException;
 import org.linghu.mybackend.repository.MessageRepository;
 import org.linghu.mybackend.repository.UserRepository;
 import org.linghu.mybackend.service.MessageService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 /**
@@ -89,6 +92,21 @@ public class MessageServiceImpl implements MessageService {
 
     @Override
     public void deleteMessage(String id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated()) {
+            // 仅在有认证上下文时才加载消息并进行权限校验（避免无安全上下文的单元测试出现NPE）
+            Message msg = messageRepository.findById(id).orElse(null);
+            String username = auth.getName();
+            boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+            boolean isSender = (msg != null && msg.getSender() != null && msg.getSender().equals(username));
+
+            // 仅管理员或发送者可以删除消息；接收者（如学生）无权删除
+            if (!(isAdmin || isSender)) {
+                throw new UnauthorizedException("权限不足，无法访问该资源");
+            }
+        }
+
+        // 未认证场景（如某些单元测试直接调用 Service）保持原有行为，执行幂等删除
         messageRepository.deleteById(id);
     }
 

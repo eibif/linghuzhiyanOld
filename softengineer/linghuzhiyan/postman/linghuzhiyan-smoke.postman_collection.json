@@ -40,6 +40,8 @@
   { "key": "messageId", "value": "", "type": "string" },
     { "key": "messageIdFromTeacher", "value": "", "type": "string" },
   { "key": "assistantMessageId", "value": "", "type": "string" },
+  { "key": "adminToStudentMessageId", "value": "", "type": "string" },
+  { "key": "adminToTeacherMessageId", "value": "", "type": "string" },
   { "key": "discussionId", "value": "", "type": "string" },
   { "key": "commentId", "value": "", "type": "string" },
   { "key": "replyCommentId", "value": "", "type": "string" },
@@ -976,6 +978,21 @@
       ] } } ]
     },
     {
+      "name": "14.2a - Student Get Messages From Admin (capture one)",
+      "request": { "method": "GET", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages/sender/{{adminUsername}}", "host": ["{{baseUrl}}"], "path": ["api","messages","sender","{{adminUsername}}"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "let json=null; try{ json=pm.response.json(); }catch(e){};",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "const arr = (json && Array.isArray(json.data)) ? json.data : [];",
+        "const mine = arr.filter(m => m && m.id);",
+        "if(mine[0] && mine[0].id){ pm.collectionVariables.set('adminToStudentMessageId', mine[0].id); }",
+        "pm.test('记录管理员消息ID', () => !!pm.collectionVariables.get('adminToStudentMessageId'));"
+      ] } } ]
+    },
+    {
       "name": "14.3 - Student Mark Teacher Message Read",
       "request": { "method": "PUT", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
         "url": { "raw": "{{baseUrl}}/api/messages/{{messageIdFromTeacher}}/read", "host": ["{{baseUrl}}"], "path": ["api","messages","{{messageIdFromTeacher}}","read"] }
@@ -1018,12 +1035,46 @@
       ] } } ]
     },
     {
+      "name": "14.5a - Admin Send Message to Teacher",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"}, {"key":"Authorization","value":"{{authHeader}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages", "host": ["{{baseUrl}}"], "path": ["api","messages"] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"管理员发给老师的消息-{{runId}}\",\n  \"content\": \"用于权限负例：老师不能删除管理员发送的消息\",\n  \"receiver\": \"{{teacherUsername}}\",\n  \"senderRole\": \"ROLE_ADMIN\"\n}" }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 200', () => pm.response.code===200);",
+        "const json = pm.response.json();",
+        "pm.test('业务码 200', () => json && json.code===200);",
+        "if(json && json.data && json.data.id){ pm.collectionVariables.set('adminToTeacherMessageId', json.data.id); }",
+        "pm.test('记录 adminToTeacherMessageId', () => !!pm.collectionVariables.get('adminToTeacherMessageId'));"
+      ] } } ]
+    },
+    {
       "name": "14.6 - Admin Delete Assistant Message",
       "request": { "method": "DELETE", "header": [ {"key":"Authorization","value":"{{authHeader}}"} ],
         "url": { "raw": "{{baseUrl}}/api/messages/{{assistantMessageId}}", "host": ["{{baseUrl}}"], "path": ["api","messages","{{assistantMessageId}}"] }
       },
       "event": [ { "listen": "test", "script": { "exec": [
         "pm.test('HTTP 200/204/404', () => [200,204,404].includes(pm.response.code));"
+      ] } } ]
+    },
+    {
+      "name": "14.6b - Teacher Try Delete Admin->Teacher Message (expect 403)",
+      "request": { "method": "DELETE", "header": [ {"key":"Authorization","value":"{{teacherAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages/{{adminToTeacherMessageId}}", "host": ["{{baseUrl}}"], "path": ["api","messages","{{adminToTeacherMessageId}}"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 403', () => pm.response.code===403);"
+      ] } } ]
+    },
+    {
+      "name": "14.6a - Student Try Delete Admin Message (expect 403)",
+      "request": { "method": "DELETE", "header": [ {"key":"Authorization","value":"{{studentAuth}}"} ],
+        "url": { "raw": "{{baseUrl}}/api/messages/{{adminToStudentMessageId}}", "host": ["{{baseUrl}}"], "path": ["api","messages","{{adminToStudentMessageId}}"] }
+      },
+      "event": [ { "listen": "test", "script": { "exec": [
+        "pm.test('HTTP 403', () => pm.response.code===403);"
       ] } } ]
     },
     {
